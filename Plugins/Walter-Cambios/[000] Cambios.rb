@@ -61,17 +61,16 @@ class PokemonPokedexMenu_Scene
 end
 
 class PokemonPokedexInfo_Scene
+    alias walter_pbUpdateDummyPokemon pbUpdateDummyPokemon
     def pbUpdateDummyPokemon
+        walter_pbUpdateDummyPokemon
         @species = @dexlist[@index][:species]
         @gender, @form, _shiny = $player.pokedex.last_form_seen(@species)
         @shiny = _shiny
-        metrics_data = GameData::SpeciesMetrics.get_species_form(@species, @form)
         @sprites["infosprite"].setSpeciesBitmap(@species, @gender, @form, @shiny)
         @sprites["formfront"]&.setSpeciesBitmap(@species, @gender, @form, @shiny)
         if @sprites["formback"]
             @sprites["formback"].setSpeciesBitmap(@species, @gender, @form, @shiny, false, true)
-            @sprites["formback"].y = 256
-            #@sprites["formback"].y += metrics_data.back_sprite[1] * 2
         end
         @sprites["formicon"]&.pbSetParams(@species, @gender, @form, @shiny)
     end
