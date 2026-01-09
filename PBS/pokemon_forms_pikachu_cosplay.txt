@@ -1,0 +1,60 @@
+#-------------------------------
+[PIKACHU,2]
+FormName = Cosplay Pikachu
+EggGroups = Undiscovered
+Pokedex = This Pikachu loves wearing special outfits. When it feels admired, the electricity in its cheeks grows stronger and brighter.
+GenderRatio = AlwaysFemale
+Abilities = LIGHTNINGROD
+Generation = 6
+Flags = SOSForm_0,CannotDynamax,CannotTerastallize
+Evolutions = RAICHU,None
+#-------------------------------
+[PIKACHU,3]
+FormName = Pikachu Belle
+EggGroups = Undiscovered
+Pokedex = Dressed in an elegant gown, this Pikachu moves with grace and precision. Its Electric-type moves look like a perfectly rehearsed dance.
+GenderRatio = AlwaysFemale
+Abilities = LIGHTNINGROD
+Generation = 6
+Flags = SOSForm_0,CannotDynamax,CannotTerastallize
+Evolutions = RAICHU,None
+#-------------------------------
+[PIKACHU,4]
+FormName = Pikachu Libre
+EggGroups = Undiscovered
+Pokedex = Trained in flashy acrobatics, this Pikachu leaps and strikes at high speed. Its mask represents its strong fighting spirit.
+GenderRatio = AlwaysFemale
+Abilities = LIGHTNINGROD
+Generation = 6
+Flags = SOSForm_0,CannotDynamax,CannotTerastallize
+Evolutions = RAICHU,None
+#-------------------------------
+[PIKACHU,5]
+FormName = Pikachu, Ph.D.
+EggGroups = Undiscovered
+Pokedex = This Pikachu spends countless hours studying. It analyzes its opponents before attacking, releasing electricity with scientific accuracy.
+GenderRatio = AlwaysFemale
+Abilities = LIGHTNINGROD
+Generation = 6
+Flags = SOSForm_0,CannotDynamax,CannotTerastallize
+Evolutions = RAICHU,None
+#-------------------------------
+[PIKACHU,6]
+FormName = Pikachu Pop Star
+EggGroups = Undiscovered
+Pokedex = It sings while battling, energizing both allies and spectators. The electricity in its cheeks pulses in rhythm with its songs.
+GenderRatio = AlwaysFemale
+Abilities = LIGHTNINGROD
+Generation = 6
+Flags = SOSForm_0,CannotDynamax,CannotTerastallize
+Evolutions = RAICHU,None
+#-------------------------------
+[PIKACHU,7]
+FormName = Pikachu Rock Star
+EggGroups = Undiscovered
+Pokedex = When it plays its guitar, sparks fly across the stage. Its rebellious nature makes its electric attacks loud and powerful.
+GenderRatio = AlwaysFemale
+Abilities = LIGHTNINGROD
+Generation = 6
+Flags = SOSForm_0,CannotDynamax,CannotTerastallize
+Evolutions = RAICHU,None
