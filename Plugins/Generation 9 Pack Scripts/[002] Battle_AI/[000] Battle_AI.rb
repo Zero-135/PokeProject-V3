@@ -79,31 +79,6 @@ class Battle::AI
   end
 
   #===============================================================================
-  # AI_ChooseMove
-  #===============================================================================
-  # Returns whether the move will definitely fail against the target (assuming
-  # no battle conditions change between now and using the move).
-  #-------------------------------------------------------------------------------
-  alias paldea_pbPredictMoveFailureAgainstTarget pbPredictMoveFailureAgainstTarget
-  def pbPredictMoveFailureAgainstTarget
-    ret = paldea_pbPredictMoveFailureAgainstTarget
-    if !ret
-      # Immunity because of Armor Tail
-      if @move.rough_priority(@user) > 0 && @target.opposes?(@user)
-        each_same_side_battler(@target.side) do |b, i|
-          return true if b.has_active_ability?(:ARMORTAIL)
-        end
-      end
-      # Immunity because of Commander
-      return true if target.has_active_ability?(:COMMANDER) && target.battler.isCommander?
-      # Good As Gold Pokémon immunity to status moves
-      return true if @move.statusMove?  && @target.has_active_ability?(:GOODASGOLD) && 
-                                          !(@user.has_active_ability?(:MYCELIUMMIGHT))
-    end
-    return ret
-  end
-
-  #===============================================================================
   # AI_ChooseMove_GenericEffects
   #===============================================================================
   # Aliased to adds score modifier for the Gen 9 abilities and moves.

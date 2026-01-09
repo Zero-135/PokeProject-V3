@@ -126,34 +126,6 @@ class Battle::Battler
   end
   
   #-----------------------------------------------------------------------------
-  # Aliased for Opportunist and Mirror Herb checks.
-  #-----------------------------------------------------------------------------
-  alias paldea_pbRaiseStatStage pbRaiseStatStage
-  def pbRaiseStatStage(*args)
-    ret = paldea_pbRaiseStatStage(*args)
-    if ret && !@mirrorHerbUsed && !(hasActiveAbility?(:CONTRARY) && !args[4] && !@battle.moldBreaker)
-      addSideStatUps(args[0], args[1])
-    end
-    return ret
-  end
-  
-  alias paldea_pbRaiseStatStageByCause pbRaiseStatStageByCause
-  def pbRaiseStatStageByCause(*args)
-    ret = paldea_pbRaiseStatStageByCause(*args)
-    if ret && !@mirrorHerbUsed && !(hasActiveAbility?(:CONTRARY) && !args[5] && !@battle.moldBreaker)
-      addSideStatUps(args[0], args[1]) 
-    end
-    return ret
-  end
-  
-  alias paldea_pbRaiseStatStageByAbility pbRaiseStatStageByAbility
-  def pbRaiseStatStageByAbility(*args)
-    ret = paldea_pbRaiseStatStageByAbility(*args)
-    pbMirrorStatUpsOpposing
-    return ret
-  end
-  
-  #-----------------------------------------------------------------------------
   # Used for triggering and consuming Mirror Herb.
   #-----------------------------------------------------------------------------
   def pbItemOpposingStatGainCheck(statUps, item_to_use = nil)
@@ -527,54 +499,6 @@ class Battle::Battler
       return false
     end
     return paldea_pbCanChooseMove?(move, commandPhase, showMessages, specialUsage)
-  end
-  
-  #-----------------------------------------------------------------------------
-  # -Aliased to add Silk Trap to move success check.
-  # -Rechecks for effects that ignore abilities before running success check.
-  #-----------------------------------------------------------------------------
-  alias paldea_pbSuccessCheckAgainstTarget pbSuccessCheckAgainstTarget
-  def pbSuccessCheckAgainstTarget(move, user, target, targets)
-    @battle.moldBreaker = user.hasMoldBreaker? || (move.statusMove? && user.hasActiveAbility?(:MYCELIUMMIGHT)) if !@battle.moldBreaker
-    @battle.moldBreaker = false if target.hasActiveItem?(:ABILITYSHIELD)
-    if !(user.hasActiveAbility?(:UNSEENFIST) && move.contactMove?)
-      if move.canProtectAgainst? && !user.effects[PBEffects::TwoTurnAttack]
-        # Silk Trap
-        if target.effects[PBEffects::SilkTrap] && move.damagingMove?
-          if move.pbShowFailMessages?(targets)
-            @battle.pbCommonAnimation("SilkTrap", target)
-            @battle.pbDisplay(_INTL("{1} protected itself!", target.pbThis))
-          end
-          target.damageState.protected = true
-          @battle.successStates[user.index].protected = true
-          if move.pbContactMove?(user) && user.affectedByContactEffect? &&
-             user.pbCanLowerStatStage?(:SPEED, target)
-            user.pbLowerStatStage(:SPEED, 1, target)
-          end
-          return false
-        end
-        # Burning Bulwark
-        if target.effects[PBEffects::BurningBulwark] && move.damagingMove?
-          if move.pbShowFailMessages?(targets)
-            @battle.pbCommonAnimation("BurningBulwark", target)
-            @battle.pbDisplay(_INTL("{1} protected itself!", target.pbThis))
-          end
-          target.damageState.protected = true
-          @battle.successStates[user.index].protected = true
-          if move.pbContactMove?(user) && user.affectedByContactEffect? &&
-             user.pbCanBurn?(target, false)
-            user.pbBurn(target)
-          end
-          return false
-        end
-      end
-    end
-    ret = paldea_pbSuccessCheckAgainstTarget(move, user, target, targets)
-    if ret
-      Battle::AbilityEffects.triggerOnMoveSuccessCheck(
-        target.ability, user, target, move, @battle)
-    end
-    return ret
   end
 end
 

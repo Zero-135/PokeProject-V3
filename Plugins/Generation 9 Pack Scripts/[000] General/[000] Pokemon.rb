@@ -276,18 +276,6 @@ EventHandlers.add(:on_player_step_taken, :evolution_steps, proc {
 })
 
 #-------------------------------------------------------------------------------
-# Initializes Mirror Herb step counter.
-#-------------------------------------------------------------------------------
-class PokemonGlobalMetadata
-  attr_accessor :mirrorherb_steps
-  alias paldea_initialize initialize
-  def initialize
-    @mirrorherb_steps = 0
-    paldea_initialize
-  end
-end
-
-#-------------------------------------------------------------------------------
 # Tracks steps taken while Pokemon in the party are holding a Mirror Herb.
 # Every 256 steps, inherits Egg moves from other party members if possible.
 #-------------------------------------------------------------------------------

@@ -180,8 +180,8 @@ end
 #-------------------------------------------------------------------------------
 class PokemonSummary_Scene
   alias memento_pbStartScene pbStartScene
-  def pbStartScene(party, partyindex, inbattle = false)
-    memento_pbStartScene(party, partyindex, inbattle)
+  def pbStartScene(party, partyindex, inbattle = false, page=1)
+    memento_pbStartScene(party, partyindex, inbattle, page)
     @sprites["uparrow"].x = (Graphics.width / 2) - 14
     @sprites["uparrow"].y = 30
     @sprites["downarrow"].x = (Graphics.width / 2) - 14
