@@ -71,8 +71,14 @@ class PokemonDataPageSprite < Sprite
         end
         @pokemonsprites[i].pbSetParams(species.species, sp_gender, sp_form)
         @pokemonsprites[i].visible = true
+        if !$player.owned?(pokemon)
+          @pokemonsprites[i].tone = Tone.new(-255,-255,-255,0)
+        else
+          @pokemonsprites[i].tone = Tone.new(0,0,0,0)
+        end
       elsif pokemon == :RETURN
         @pokemonsprites[i].pbSetParams(pokemon, 0, 0)
+        @pokemonsprites[i].tone = Tone.new(0,0,0,0)
         @pokemonsprites[i].visible = true
       else
         @pokemonsprites[i].visible = false
@@ -248,12 +254,12 @@ class PokemonPokedexInfo_Scene
           if sp.form_name.include?(sp.name)
             full_name = _INTL("{1}", sp.form_name)
           else
-            full_name = _INTL("{1} {2}", sp.form_name, sp.name)
+            full_name = _INTL("{2} {1}", sp.form_name, sp.name)
           end
         else
           full_name = _INTL("{1}", sp.name)
         end
-        if pbConfirmMessage(_INTL("Jump to <c2=043c3aff>{1}</c2>'s entry page?", full_name))
+        if $player.owned?(sp) && pbConfirmMessage(_INTL("¿Saltar a la Página de la Pokédex de <c2=043c3aff>{1}</c2>?", full_name))
           @dexlist.each_with_index do |dex, i|
             next if dex[:species] != sp.species
             newEntry = i
@@ -284,22 +290,22 @@ class PokemonPokedexInfo_Scene
         next if !move
         case cursor
         when :move
-          msg = _INTL("View only <c2=043c3aff>compatible species</c2> that know the move <c2=65467b14>{1}</c2>?", move.name)
+          msg = _INTL("¿Ver solo las <c2=043c3aff>especies compatibles</c2> que conocen <c2=65467b14>{1}</c2>?", move.name)
           if pbConfirmMessage(msg)
             try_list = pbFilterDataList(:egg, @data_hash[:egg])
             if try_list.empty?
-              pbMessage(_INTL("No compatible species found."))
+              pbMessage(_INTL("No se han encontrado especies compatibles."))
             else
               cursor = :egg
               dorefresh = true
             end
           end
         when :egg
-          msg = _INTL("View <c2=043c3aff>all species</c2> that know the move <c2=65467b14>{1}</c2>?", move.name)
+          msg = _INTL("¿Ver <c2=043c3aff>todas las especies</c2> que conocen <c2=65467b14>{1}</c2>?", move.name)
           if pbConfirmMessage(msg)
             try_list = pbFilterDataList(:move, @data_hash[:move])
             if try_list.empty?
-              pbMessage(_INTL("No species found."))
+              pbMessage(_INTL("No se ha encontrado ninguna especie."))
             else
               cursor = :move
               dorefresh = true
@@ -349,13 +355,12 @@ class PokemonPokedexInfo_Scene
           next if !sp.display_species?(@dexlist, species, true)
           regional_form = sp.form > 0 && sp.is_regional_form?
           base_form = (sp.form > 0) ? GameData::Species.get_species_form(sp.species, sp.base_pokedex_form) : nil
-          if base_form && !regional_form
-            next if sp.moves.sort == base_form.moves.sort && 
-                    sp.get_tutor_moves.sort == base_form.get_tutor_moves.sort
-          end
+          next if base_form && !regional_form && 
+		          sp.moves == base_form.moves && 
+              sp.get_tutor_moves == base_form.get_tutor_moves
           if sp.moves.any? { |m| m[1] == moveID } ||
              sp.get_tutor_moves.include?(moveID) ||
-             sp.get_inherited_moves.include?(moveID)
+             sp.get_egg_moves.include?(moveID)
             list.push(sp.id)
           end
         end
@@ -367,7 +372,7 @@ class PokemonPokedexInfo_Scene
           sp = GameData::Species.try_get(s)
           if sp && sp.moves.any? { |m| m[1] == moveID } ||
              sp.get_tutor_moves.include?(moveID) ||
-             sp.get_inherited_moves.include?(moveID)
+             sp.get_egg_moves.include?(moveID)
             compatible.push(s)
           end
         end
@@ -383,8 +388,8 @@ class PokemonPokedexInfo_Scene
         regional_form = sp.form > 0 && sp.is_regional_form?
         base_form = (sp.form > 0) ? GameData::Species.get_species_form(sp.species, sp.base_pokedex_form) : nil
         next if base_form && !regional_form && 
-                sp.abilities == base_form.abilities && 
-                sp.hidden_abilities == base_form.hidden_abilities
+		        sp.abilities == base_form.abilities && 
+            sp.hidden_abilities == base_form.hidden_abilities
         if sp.abilities.include?(cursor) || sp.hidden_abilities.include?(cursor)
           list.push(sp.id)
         end
@@ -400,7 +405,7 @@ class PokemonPokedexInfo_Scene
         regional_form = sp.form > 0 && sp.is_regional_form?
         base_form = (sp.form > 0) ? GameData::Species.get_species_form(sp.species, sp.base_pokedex_form) : nil
         next if base_form && !regional_form && 
-                sp.wild_item_common   == base_form.wild_item_common   && 
+		        sp.wild_item_common   == base_form.wild_item_common   && 
                 sp.wild_item_uncommon == base_form.wild_item_uncommon &&
                 sp.wild_item_rare     == base_form.wild_item_rare
         if sp.wild_item_common.include?(cursor) ||
@@ -440,7 +445,7 @@ class PokemonPokedexInfo_Scene
     gender = (cursor == :egg) ? [1, 0][@gender] : @gender
     @sprites["pokelist"].setPokemon(list, page, gender)
     pokesprite = @sprites["pokelist"].getPokemon(index)
-    name = (species_data) ? species_data.name : _INTL("Return")
+    name = (species_data) ? species_data.name : _INTL("Volver")
     textpos = [
       [name, 256, 248, :center, base, shadow, :outline],
       [sprintf("%d/%d", page + 1, maxpage + 1), 51, 249, :center, base, shadow, :outline]
@@ -466,10 +471,10 @@ class PokemonPokedexInfo_Scene
       )
       case cursor
       when :move
-        heading = _INTL("All species that learn this move:")
+        heading = _INTL("Especies que conocen el movimiento:")
         imagepos.push([_INTL("Graphics/UI/Pokedex/icon_own"), 14, 50])
       when :egg
-        heading = _INTL("Compatible species that learn this move:")
+        heading = _INTL("Especies compatibles que conocen este movimiento:")
         imagepos.push([_INTL("Graphics/Pokemon/Eggs/000_icon"), -2, 26, 0, 0, 64, 64])
       end
       textpos.push([heading, 52,  56, :left, base, Color.black, :outline])
@@ -497,13 +502,13 @@ class PokemonPokedexInfo_Scene
       end
     else
       if GameData::Ability.exists?(cursor)
-        view = "species Abilities"
+        view = "Habilidades de la especie"
       elsif GameData::Item.exists?(cursor)
-        view = "species Held Items"
+        view = "Objetos equipados de la especie"
       else
-        view = (@viewingMoves) ? "species Moves" : "species data"
+        view = (@viewingMoves) ? "Movimientos de la especie" : "datos de la especie"
       end
-      data_text = DATA_TEXT_TAGS[0] + "Return to #{view}."
+      data_text = DATA_TEXT_TAGS[0] + "Volver a #{view}."
     end
     pbDrawImagePositions(overlay, imagepos)
     pbDrawTextPositions(overlay, textpos)
@@ -521,7 +526,7 @@ class PokemonPokedexInfo_Scene
     pbPlayBuzzerSE if list.empty?
     return if list.empty?
     list.uniq!
-    list.push(_INTL("Return"))
+    list.push(_INTL("Volver"))
     index = 0
     maxidx = list.length - 1
     pbSEPlay("GUI storage show party panel")
@@ -618,15 +623,15 @@ class PokemonPokedexInfo_Scene
         case cursor
         when :item
           case num
-          when 0 then note = "Common"
-          when 1 then note = "Uncommon"
-          when 2 then note = "Rare"
+          when 0 then note = "Común"
+          when 1 then note = "Poco común"
+          when 2 then note = "Raro"
           end
         when :ability
           case num
-          when 0 then note = "Slot #{list.index(id) + 1}"
-          when 1 then note = "Hidden"
-          when 2 then note = "Special"
+          when 0 then note = "Habil. #{list.index(id) + 1}"
+          when 1 then note = "H. Oculta"
+          when 2 then note = "H. Especial"
           end
         end
         idx = num
@@ -662,7 +667,7 @@ class PokemonPokedexInfo_Scene
     when Symbol
       data_text = DATA_TEXT_TAGS[0] + data.get(list[index]).description
     else
-      data_text = DATA_TEXT_TAGS[0] + "Return to species data."
+      data_text = DATA_TEXT_TAGS[0] + "Volver a los datos de la especie."
     end
     drawFormattedTextEx(overlay, 34, 294, 446, _INTL("{1}", data_text))
   end

@@ -151,9 +151,41 @@ class PokemonPokedexInfo_Scene
     # Sorts all owned species into compatibility lists.
     #---------------------------------------------------------------------------
     family = species.get_family_species
+    family_evos_temp = species.get_evolutions(true)
+    family_evos = []
+    for i in family_evos_temp
+      family_evos << (i[0])
+    end
+    family_to_insert = []
     blacklisted = [:PICHU_2, :FLOETTE_5, :GIMMIGHOUL_1].include?(species.id) ||
                   species.species == :PIKACHU && (8..15).include?(species.form)
+
     GameData::Species.each do |sp|
+
+      
+
+      # Family members.
+      next if blacklisted
+      if sp.display_species?(@dexlist, species)
+        if family.include?(sp.species)
+          if sp.species == species.species
+            special_form, _check_form, _check_item = pbGetSpecialFormData(sp)
+            next if !special_form
+          end
+          # @data_hash[:family] << sp.id if (sp.form == species.form || (family_evos.include?(sp.id) && !@data_hash[:family].include?(sp.id)))
+          family_to_insert << sp if family_evos.include?(sp.species) || sp.form != species.form
+        end
+      elsif sp.display_species?(@dexlist, species, false, true)
+          if family.include?(sp.species)
+            if sp.species == species.species
+              special_form, _check_form, _check_item = pbGetSpecialFormData(sp)
+              next if !special_form
+            end
+            # @data_hash[:family] << sp.id if sp.form == species.form || ( sp.id )
+            family_to_insert << sp if family_evos.include?(sp.species) || sp.form != species.form
+          end
+      end
+      #-------------------------------------------------------------------------
       next if !sp.display_species?(@dexlist, species)
       regional_form = sp.form > 0 && sp.is_regional_form?
       base_form = (sp.form > 0) ? GameData::Species.get_species_form(sp.species, sp.base_pokedex_form) : nil
@@ -223,6 +255,21 @@ class PokemonPokedexInfo_Scene
         end
       end
     end
+
+    family_to_insert.each do |fam|
+      # Add forms that match the species form directly
+      if fam.form == species.form
+        @data_hash[:family] << fam.id
+      else
+        # Skip if there's another form of this species already added
+        # or if this species isn't in the evolution family
+        next if family_to_insert.any? { |f| f.species == fam.species && f != fam } || 
+                !family_evos.include?(fam.species)
+                
+        @data_hash[:family] << fam.id
+      end
+    end
+
     @data_hash.each_key do |key|
 	  next if key == :species
       list = @data_hash[key].clone
@@ -420,12 +467,12 @@ class PokemonPokedexInfo_Scene
     # Draws the base stats text and bars.
     #---------------------------------------------------------------------------
     textpos.push(
-      [_INTL("HP"),        12, 104, :left, base, shadow, :outline],
-      [_INTL("Attack"),    12, 132, :left, base, shadow, :outline],
-      [_INTL("Defense"),   12, 160, :left, base, shadow, :outline],
-      [_INTL("Sp. Atk"),   12, 188, :left, base, shadow, :outline],
-      [_INTL("Sp. Def"),   12, 216, :left, base, shadow, :outline],
-      [_INTL("Speed"),     12, 244, :left, base, shadow, :outline]
+      [_INTL("PS"),        12, 104, :left, base, shadow, :outline],
+      [_INTL("Ataque"),    12, 132, :left, base, shadow, :outline],
+      [_INTL("Defensa"),   12, 160, :left, base, shadow, :outline],
+      [_INTL("At. Esp."),  12, 188, :left, base, shadow, :outline],
+      [_INTL("Df. Esp."),  12, 216, :left, base, shadow, :outline],
+      [_INTL("Velocid."),  12, 244, :left, base, shadow, :outline]
     )
     stats_order = [:HP, :ATTACK, :DEFENSE, :SPECIAL_ATTACK, :SPECIAL_DEFENSE, :SPEED]
     if owned
@@ -440,8 +487,8 @@ class PokemonPokedexInfo_Scene
     #---------------------------------------------------------------------------
     # Draws Ability/Move button text.
     #---------------------------------------------------------------------------
-    textpos.push([_INTL("Abilities"), 306, 253, :center, base, shadow, :outline],
-                 [_INTL("Moves"),     434, 253, :center, base, shadow, :outline])			  
+    textpos.push([_INTL("Habilid."), 306, 253, :center, base, shadow, :outline],
+                 [_INTL("Movimien."),434, 253, :center, base, shadow, :outline])			  
     #---------------------------------------------------------------------------
     # Sets up sprites if the species is a special form.
     #---------------------------------------------------------------------------
@@ -493,8 +540,11 @@ class PokemonPokedexInfo_Scene
         @sprites["familyicon0"].visible = true
         if $player.seen?(prevo)
           @sprites["familyicon1"].pbSetParams(prevo, @gender, prevo_data.form)
+          @sprites["familyicon1"].tone = Tone.new(0,0,0,0)
         else
-          @sprites["familyicon1"].species = nil
+          @sprites["familyicon1"].pbSetParams(prevo, @gender, prevo_data.form)
+          @sprites["familyicon1"].tone = Tone.new(-255,-255,-255,0)
+          # @sprites["familyicon1"].species = nil
         end
         @sprites["familyicon1"].x = (stages == 1) ? ICONS_LEFT_DOUBLE : ICONS_CENTER
         @sprites["familyicon1"].visible = true
@@ -503,8 +553,11 @@ class PokemonPokedexInfo_Scene
           baby_data = GameData::Species.get_species_form(baby, prevo_data.form)
           if $player.seen?(baby)
             @sprites["familyicon2"].pbSetParams(baby, @gender, baby_data.form)
+            @sprites["familyicon2"].tone = Tone.new(0,0,0,0)
           else
-            @sprites["familyicon2"].species = nil
+            @sprites["familyicon2"].pbSetParams(baby, @gender, baby_data.form)
+            @sprites["familyicon2"].tone = Tone.new(-255,-255,-255,0)
+            # @sprites["familyicon2"].species = nil
           end
           @sprites["familyicon2"].x = ICONS_LEFT_TRIPLE
           @sprites["familyicon2"].visible = true

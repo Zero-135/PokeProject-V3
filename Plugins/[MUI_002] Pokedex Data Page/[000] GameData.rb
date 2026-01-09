@@ -60,49 +60,49 @@ end
 GameData::EggGroup.each do |group|
   case group.id
   when :Undiscovered
-    group.alt_name = _INTL("Infertile")
+    group.alt_name = _INTL("Desconocido")
     group.icon_position = 1
   when :Monster
-    group.alt_name = _INTL("Monster")
+    group.alt_name = _INTL("Monstruo")
     group.icon_position = 2
   when :Water1
-    group.alt_name = _INTL("Aquatic")
+    group.alt_name = _INTL("Agua 1")
     group.icon_position = 3
   when :Bug
-    group.alt_name = _INTL("Insect")
+    group.alt_name = _INTL("Bicho")
     group.icon_position = 4
   when :Flying
-    group.alt_name = _INTL("Avian")
+    group.alt_name = _INTL("Volador")
     group.icon_position = 5
   when :Field
-    group.alt_name = _INTL("Animalia")
+    group.alt_name = _INTL("Campo")
     group.icon_position = 6
   when :Fairy
-    group.alt_name = _INTL("Pixie")
+    group.alt_name = _INTL("Hada")
     group.icon_position = 7
   when :Grass
-    group.alt_name = _INTL("Plant")
+    group.alt_name = _INTL("Planta")
     group.icon_position = 8
   when :Humanlike
-    group.alt_name = _INTL("Bipedal")
+    group.alt_name = _INTL("Humanoide")
     group.icon_position = 9
   when :Water3
-    group.alt_name = _INTL("Primordial")
+    group.alt_name = _INTL("Agua 3")
     group.icon_position = 10
   when :Mineral
-    group.alt_name = _INTL("Inanimate")
+    group.alt_name = _INTL("Mineral")
     group.icon_position = 11
   when :Amorphous
-    group.alt_name = _INTL("Amorphous")
+    group.alt_name = _INTL("Amorfo")
     group.icon_position = 12
   when :Water2
-    group.alt_name = _INTL("Marine")
+    group.alt_name = _INTL("Agua 2")
     group.icon_position = 13
   when :Ditto
-    group.alt_name = _INTL("Replica")
+    group.alt_name = _INTL("Ditto")
     group.icon_position = 14
   when :Dragon
-    group.alt_name = _INTL("Draconic")
+    group.alt_name = _INTL("Dragón")
     group.icon_position = 15
   else
     group.icon_position = 0
@@ -114,7 +114,7 @@ end
 #-------------------------------------------------------------------------------
 GameData::EggGroup.register({
   :id   => :None,
-  :name => _INTL("None"),
+  :name => _INTL("Ninguno"),
   :alt_name => _INTL("????"),
   :icon_position => 0
 })
@@ -148,18 +148,18 @@ module GameData
       # Determines the species name.
       if GameData::Species.exists?(species)
         prefix = ""
-        if @id.to_s.include?("Male")
-          prefix = "a male "
-        elsif @id.to_s.include?("Female")
-          prefix = "a female "
+        if @id.to_s.downcase.include?("female")
+          prefix = " siendo hembra"
+        elsif @id.to_s.downcase.include?("male")
+          prefix = " siendo macho"
         end
         form = false if evo == :MOTHIM
         species_data = GameData::Species.get(species)
         form_name = species_data.form_name
         if form && form_name && !form_name.include?(species_data.name)
-          full_name = _INTL("{1}{2} {3}", prefix, species_data.form_name, species_data.name)
+          full_name = _INTL("{2} {3}{1}", prefix, species_data.name, species_data.form_name)
         else
-          full_name = _INTL("{1}{2}", prefix, species_data.name)
+          full_name = _INTL("{2}{1}", prefix, species_data.name)
         end
       else
         full_name = _INTL("????")
@@ -179,7 +179,7 @@ module GameData
         end
         prefix = ""
         if [:Type, :Item, :Species].include?(@parameter)
-          prefix = (par.starts_with_vowel?) ? "an " : "a "
+          prefix = ' ' #(par.starts_with_vowel?) ? "an " : "a "
         end
         param = c[2] + par + c[0] if !c.empty?
         param_name = _INTL("{1}{2}", prefix, param)
@@ -205,46 +205,46 @@ module GameData
         end
       else
         case param
-        when "MossRock"
-          location = (c.empty?) ? "Moss Rock" : c[2] + "Moss Rock" + c[0]
-          param_name = _INTL("near a {1}", location)
+        when "  "
+          location = (c.empty?) ? "Roca Musgosa" : c[2] + "Roca Musgosa" + c[0]
+          param_name = _INTL("cerca de una {1}", location)
         when "IceRock"
-          location = (c.empty?) ? "Ice Rock" : c[2] + "Ice Rock" + c[0]
-          param_name = _INTL("near an {1}", location)
+          location = (c.empty?) ? "Roca Helada" : c[2] + "Roca Helada" + c[0]
+          param_name = _INTL("cerca de una {1}", location)
         when "Magnetic"
-          location = (c.empty?) ? "magnetic area" : c[2] + "magnetic area" + c[0]
-          param_name = _INTL("in a {1}", location)
+          location = (c.empty?) ? "Área Magnética" : c[2] + "Área Magnética" + c[0]
+          param_name = _INTL("en un {1}", location)
         else
-          location = (c.empty?) ? "special area" : c[2] + "special area" + c[0]
-          param_name = _INTL("in a {1}", location)
+          location = (c.empty?) ? "Área Especial" : c[2] + "Área Especial" + c[0]
+          param_name = _INTL("En un {1}", location)
         end
       end
       #-------------------------------------------------------------------------
       # Determines the first portion of the description based on proc type.
       if @event_proc
-        desc = (full) ? "Have #{full_name}" : "Or" 
-        desc = _INTL("{1} trigger a special event", desc)
+        desc = (full) ? "Tiene #{full_name}" : "O" 
+        desc = _INTL("{1} lanza un evento especial", desc)
       elsif @use_item_proc
-        desc = (full) ? "Expose #{full_name} to" : "Or use"
-        desc = _INTL("{1} {2}", desc, param_name)
+        desc = (full) ? "Usando #{param_name} en #{full_name} " : "Usar #{param_name}"
+        #desc = _INTL("{1} {2}", desc, param_name)
       elsif @on_trade_proc
-        desc = (full) ? _INTL("Trade {1}", full_name) : _INTL("Or trade")
+        desc = (full) ? _INTL("Intercambio {1}", full_name) : _INTL("Intercambio")
       elsif @after_battle_proc
-        desc = (full) ? "Have #{full_name}" : "Or"
-        desc = _INTL("{1} conclude a battle", desc)
+        desc = (full) ? "Tiene #{full_name}" : ""
+        desc = _INTL("{1} finaliza una batalla", desc)
       elsif @level_up_proc
         if @any_level_up
-          desc = (full) ? _INTL("Level up {1}", full_name) : _INTL("Or level up")
+          desc = (full) ? _INTL("Subir de nivel a {1}", full_name) : _INTL("Nivel")
         else
-          desc = (full) ? "Have #{full_name}" : "Or"
-          desc = _INTL("{1} reach level {2} or higher", desc, param)
+          desc = (full) ? "Subir a #{full_name}" : "O"
+          desc = _INTL("{1} al nivel {2}", desc, param)
         end
       elsif @id == :Shedinja
-        desc = (full) ? "#{full_name} evolves" : "evolution"
-        desc = _INTL("May be left behind in an empty party slot after {1}", desc)
+        desc = (full) ? "#{full_name} evoluciona" : "evolución"
+        desc = _INTL("Puede dejarse en una ranura vacía del equipo después de {1}", desc)
       else
-        desc = (full) ? "#{full_name} evolves" : "Or"
-        desc = _INTL("{1} through unknown means", desc)
+        desc = (full) ? "#{full_name} evoluciona" : "O"
+        desc = _INTL("{1} a través de un método desconocido", desc)
       end
       #-------------------------------------------------------------------------
       # Determines the full description by combining method-specific details.
@@ -264,54 +264,55 @@ end
 #-------------------------------------------------------------------------------
 GameData::Evolution.each do |evo|
   case evo.id
-  when :LevelDay, :ItemDay, :TradeDay          then evo.description = _INTL("in the day")
-  when :LevelNight, :ItemNight, :TradeNight    then evo.description = _INTL("at night")
-  when :LevelMorning                           then evo.description = _INTL("in the morning")
-  when :LevelAfternoon                         then evo.description = _INTL("in the afternoon")
-  when :LevelEvening                           then evo.description = _INTL("during the evening")
-  when :LevelNoWeather                         then evo.description = _INTL("while the weather is clear")
-  when :LevelSun                               then evo.description = _INTL("while the sunlight is harsh")
-  when :LevelRain                              then evo.description = _INTL("while it's raining")
-  when :LevelSnow                              then evo.description = _INTL("while it's snowing")
-  when :LevelSandstorm                         then evo.description = _INTL("during a sandstorm")
-  when :LevelCycling                           then evo.description = _INTL("while traveling by bicycle")
-  when :LevelSurfing                           then evo.description = _INTL("while traveling over water")
-  when :LevelDiving                            then evo.description = _INTL("while traveling underwater")
-  when :LevelDarkness                          then evo.description = _INTL("while traveling in darkness")
-  when :LevelDarkInParty                       then evo.description = _INTL("while there's a {1}-type in the party")
-  when :AttackGreater                          then evo.description = _INTL("while its {1} is higher than its {2}")
-  when :DefenseGreater                         then evo.description = _INTL("while its {2} is higher than its {1}")
-  when :AtkDefEqual                            then evo.description = _INTL("while its {1} and {2} are equal")
-  when :Silcoon, :Cascoon                      then evo.description = _INTL("- results may vary")
-  when :Ninjask                                then evo.description = _INTL("- this may leave behind a husk afterwards")
-  when :Happiness, :ItemHappiness              then evo.description = _INTL("while it's happy")
-  when :HappinessMale, :HappinessFemale        then evo.description = _INTL("while it's happy")
-  when :MaxHappiness                           then evo.description = _INTL("while it's the happiest it can be")
-  when :HappinessDay                           then evo.description = _INTL("in the day while it's happy")
-  when :HappinessNight                         then evo.description = _INTL("at night while it's happy")
-  when :HappinessMove                          then evo.description = _INTL("while it's happy and knows the move {1}")
-  when :HappinessMoveType                      then evo.description = _INTL("while it's happy and knows {1}-type move")
-  when :HappinessHoldItem, :HoldItemHappiness  then evo.description = _INTL("while it's happy and holds {1}")
-  when :Beauty                                 then evo.description = _INTL("while its beauty is high")
-  when :HoldItem, :TradeItem                   then evo.description = _INTL("while it holds {1}")
-  when :HoldItemMale, :HoldItemFemale          then evo.description = _INTL("while it holds {1}")
-  when :DayHoldItem                            then evo.description = _INTL("in the day while it holds {1}")
-  when :NightHoldItem                          then evo.description = _INTL("at night while it holds {1}")
-  when :HasMove                                then evo.description = _INTL("while it knows the move {1}")
-  when :HasMoveType                            then evo.description = _INTL("while it knows {1}-type move")
-  when :HasInParty                             then evo.description = _INTL("while {1} is in the party")
-  when :Location                               then evo.description = _INTL("while located in {1}")
-  when :LocationFlag                           then evo.description = _INTL("while {1}")
-  when :Region                                 then evo.description = _INTL("while located in the {1} region")
-  when :TradeSpecies                           then evo.description = _INTL("for {1}")
-  when :BattleDealCriticalHit                  then evo.description = _INTL("where it landed {1} or more critical hits")
-  when :EventAfterDamageTaken                  then evo.description = _INTL("after losing at least 49 HP")
-  when :LevelWalk                              then evo.description = _INTL("after walking {1} steps with it as party leader")
-  when :LevelWithPartner                       then evo.description = _INTL("while you are partnered with another trainer")
-  when :LevelUseMoveCount                      then evo.description = _INTL("after it has used the move {1} 20 times")
-  when :LevelRecoilDamage                      then evo.description = _INTL("after losing at least {1} HP to recoil")
-  when :LevelDefeatItsKindWithItem             then evo.description = _INTL("after it beats 3 of its own kind that held {1}")
-  when :CollectItems                           then evo.description = _INTL("with atleast 999x {2} in the bag")
+  when :LevelDay, :ItemDay, :TradeDay          then evo.description = _INTL("de día")
+  when :LevelNight, :ItemNight, :TradeNight    then evo.description = _INTL("de noche")
+  when :LevelMorning                           then evo.description = _INTL("por la mañana")
+  when :LevelAfternoon                         then evo.description = _INTL("por la tarde")
+  when :LevelEvening                           then evo.description = _INTL("purante la noche")
+  when :LevelNoWeather                         then evo.description = _INTL("con clima despejado")
+  when :LevelSun                               then evo.description = _INTL("con sol fuerte")
+  when :LevelRain                              then evo.description = _INTL("mientras llueve")
+  when :LevelSnow                              then evo.description = _INTL("mientras nieva")
+  when :LevelSandstorm                         then evo.description = _INTL("durante una tormenta de arena")
+  when :LevelCycling                           then evo.description = _INTL("andando en bici")
+  when :LevelSurfing                           then evo.description = _INTL("mientras andas por el agua")
+  when :LevelDiving                            then evo.description = _INTL("mientras buceas")
+  when :LevelDarkness                          then evo.description = _INTL("mientras andas en la oscuridad")
+  when :LevelDarkInParty                       then evo.description = _INTL("cuando hay un pokémon tipo {1} en el equipo")
+  when :AttackGreater                          then evo.description = _INTL("cuando su {1} es mayor que su {2}")
+  when :DefenseGreater                         then evo.description = _INTL("cuando su {2} es mayor que su {1}")
+  when :AtkDefEqual                            then evo.description = _INTL("cuando su {1} y {2} son iguales")
+  when :Silcoon, :Cascoon                      then evo.description = _INTL("- los resultados pueden variar")
+  when :Ninjask                                then evo.description = _INTL("- esto puede dejar atrás una cáscara después")
+  when :Happiness, :ItemHappiness              then evo.description = _INTL("con felicidad alta")
+  when :HappinessMale, :HappinessFemale        then evo.description = _INTL("con felicidad alta")
+  when :MaxHappiness                           then evo.description = _INTL("con felicidad máxima")
+  when :HappinessDay                           then evo.description = _INTL("de día con felicidad alta")
+  when :HappinessNight                         then evo.description = _INTL("de noche con felicidad alta")
+  when :HappinessMove                          then evo.description = _INTL("con felicidad alta y sabiendo el movimiento {1}")
+  when :HappinessMoveType                      then evo.description = _INTL("con felicidad alta y sabiendo un ataque de tipo {1}")
+  when :HappinessHoldItem, :HoldItemHappiness  then evo.description = _INTL("con felicidad alta mientras lleva equipado {1}")
+  when :Beauty                                 then evo.description = _INTL("con belleza alta")
+  when :HoldItem, :TradeItem                   then evo.description = _INTL("sosteniendo {1}")
+  when :HoldItemMale, :HoldItemFemale          then evo.description = _INTL("sosteniendo {1}")
+  when :DayHoldItem                            then evo.description = _INTL("de día sosteniendo {1}")
+  when :NightHoldItem                          then evo.description = _INTL("de noche sosteniendo {1}")
+  when :HasMove                                then evo.description = _INTL("sabiendo el movimiento {1}")
+  when :HasMoveType                            then evo.description = _INTL("sabiendo un movimiento tipo {1}")
+  when :HasInParty                             then evo.description = _INTL("teniendo a {1} en el equipo")
+  when :Location                               then evo.description = _INTL("estando en {1}")
+  when :LocationFlag                           then evo.description = _INTL("mientras {1}")
+  when :Region                                 then evo.description = _INTL("estando el la región {1}")
+  when :TradeSpecies                           then evo.description = _INTL("por {1}")
+  when :BattleDealCriticalHit                  then evo.description = _INTL("causando {1} or mas golpes críticos")
+  when :EventAfterDamageTaken                  then evo.description = _INTL("tras perder al menos 49 PS")
+  when :LevelWalk                              then evo.description = _INTL("tras dar {1} pasos estando como primer pokémon del equipo")
+  when :LevelWithPartner                       then evo.description = _INTL("subiendo de nivel junto a un aliado")
+  when :LevelUseMoveCount                      then evo.description = _INTL("tras usar el movimiento {1} 20 veces")
+  when :LevelRecoilDamage                      then evo.description = _INTL("tras perder al menos {1} PS por daño de retroceso")
+  when :LevelRecoilDamageForm0                 then evo.description = _INTL("tras perder al menos {1} PS por daño de retroceso")
+  when :LevelDefeatItsKindWithItem             then evo.description = _INTL("tras vencer a 3 de su misma especie que tengan el objeto {1}")
+  when :CollectItems                           then evo.description = _INTL("teniendo al menos 999x {2} en la mochila")
   end
 end
 
@@ -324,9 +325,9 @@ module GameData
     #---------------------------------------------------------------------------
     # Determines if this species should be viewable in the data page menus.
     #---------------------------------------------------------------------------
-    def display_species?(dexlist, species, special = false)
+    def display_species?(dexlist, species, special = false, skip_owned_check = false)
       return false if !dexlist.any? { |dex| dex[:species] == @species }
-      return false if !$player.owned?(@species)
+      return false if (!$player.owned?(@species) && !skip_owned_check)
       return false if @species == species.species && @form == species.form
       if @form > 0 && !Settings::DEX_SHOWS_ALL_FORMS
         return false if !($player.pokedex.seen_form?(@species, 0, @form) ||
@@ -352,8 +353,8 @@ module GameData
       return default_form if default_form >= 0
       return 0
     end
-	
-    #---------------------------------------------------------------------------
+		
+	  #---------------------------------------------------------------------------
     # Checks a species for all forms that branch off into different evolutions.
     #---------------------------------------------------------------------------
     def branch_evolution_forms
@@ -369,7 +370,7 @@ module GameData
     #---------------------------------------------------------------------------
     def is_regional_form?
       if @form > 0 && self.form_name
-        return false if self.form_name.include?(_INTL("Zen Mode"))
+        return false if self.form_name.include?(_INTL("Forma Daruma"))
         Settings::REGIONAL_NAMES.each do |region|
           return true if self.form_name.include?(region)
         end
@@ -378,33 +379,27 @@ module GameData
     end
 	
     #---------------------------------------------------------------------------
-    # Returns all tutor moves including special form moves.
+    # Includes special form moves in tutor move lists.
     #---------------------------------------------------------------------------
     def get_tutor_moves
       case @id
+      when :PIKACHU     then moves = [:VOLTTACKLE]
       when :ROTOM_1     then moves = [:OVERHEAT]
       when :ROTOM_2     then moves = [:HYDROPUMP]
       when :ROTOM_3     then moves = [:BLIZZARD]
       when :ROTOM_4     then moves = [:AIRSLASH]
       when :ROTOM_5     then moves = [:LEAFSTORM]
+      when :KYUREM_1    then moves = [:ICEBURN, :FUSIONFLARE]
+      when :KYUREM_2    then moves = [:FREEZESHOCK, :FUSIONBOLT]
       when :NECROZMA_1  then moves = [:SUNSTEELSTRIKE]
       when :NECROZMA_2  then moves = [:MOONGEISTBEAM]
       when :ZACIAN_1    then moves = [:BEHEMOTHBLADE]
       when :ZAMAZENTA_1 then moves = [:BEHEMOTHBASH]
-      else                   moves = []
+      when :CALYREX_1   then moves = [:GLACIALLANCE]
+      when :CALYREX_2   then moves = [:ASTRALBARRAGE]
       end
-      return (self.tutor_moves + moves).sort
-    end
-	
-    #---------------------------------------------------------------------------
-    # Returns all egg moves including special inherited moves.
-    #---------------------------------------------------------------------------
-    def get_inherited_moves
-      case self.get_baby_species
-      when :PICHU then moves = [:VOLTTACKLE]
-      else             moves = []
-      end
-      return (self.get_egg_moves + moves).sort
+      return @tutor_moves if !moves
+      return moves.concat(@tutor_moves.clone)
     end
 	
     #---------------------------------------------------------------------------

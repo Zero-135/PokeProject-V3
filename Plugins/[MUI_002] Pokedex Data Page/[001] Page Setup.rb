@@ -22,7 +22,7 @@ module Settings
   #-----------------------------------------------------------------------------
   # List of regional names to check for to display for evolution methods.
   #-----------------------------------------------------------------------------
-  REGIONAL_NAMES = ["Alolan", "Galarian", "Hisuian", "Paldean"]
+  REGIONAL_NAMES = ["Alola", "Galar", "Hisui", "Paldea"]
 end
 
 
@@ -33,7 +33,7 @@ UIHandlers.add(:pokedex, :page_data, {
   "name"      => "DATA",
   "suffix"    => "data",
   "order"     => 40,
-  "condition" => proc { next $game_switches[Settings::POKEDEX_DATA_PAGE_SWITCH] },
+  #"condition" => proc { next $game_switches[Settings::POKEDEX_DATA_PAGE_SWITCH] },
   "layout"    => proc { |species, scene| scene.drawPageData }
 })
 
@@ -159,7 +159,7 @@ class PokemonPokedexInfo_Scene
     file2 = GameData::Species.front_sprite_filename(@species, form, 1)
     return true if file1 != file2 
     species_data = GameData::Species.get_species_form(@species, form)
-    return [_INTL("Male"), _INTL("Female")].include?(species_data.form_name)
+    return [_INTL("Macho"), _INTL("Hembra")].include?(species_data.form_name)
   end
   
   #-----------------------------------------------------------------------------
@@ -181,14 +181,14 @@ class PokemonPokedexInfo_Scene
       elsif !gender_difference?(sp.form)
         2.times do |real_gndr|
           next if !$player.pokedex.seen_form?(@species, real_gndr, sp.form) && !Settings::DEX_SHOWS_ALL_FORMS
-          ret.push([sp.form_name || _INTL("One Form"), 0, sp.form])
+          ret.push([sp.form_name || _INTL("Forma Normal"), 0, sp.form])
           break
         end
-      elsif sp.form_name == _INTL("Male") || sp.form_name == _INTL("Female")
+      elsif sp.form_name == _INTL("Macho") || sp.form_name == _INTL("Hembra")
         next if !$player.pokedex.seen_form?(@species, sp.form, sp.form) && !Settings::DEX_SHOWS_ALL_FORMS
         ret.push([sp.form_name, sp.form, sp.form])
       else
-        g = [_INTL("Male"), _INTL("Female")]
+        g = [_INTL("Macho"), _INTL("Hembra")]
         2.times do |real_gndr|
           next if !$player.pokedex.seen_form?(@species, real_gndr, sp.form) && !Settings::DEX_SHOWS_ALL_FORMS
           form_name = (sp.form_name) ? sp.form_name + " " + g[real_gndr] : g[real_gndr]
@@ -202,10 +202,10 @@ class PokemonPokedexInfo_Scene
         entry[0] = "" if !multiple_forms && !gender_difference?(entry[2])
       else
         case entry[1]
-        when 0 then entry[0] = _INTL("Male")
-        when 1 then entry[0] = _INTL("Female")
+        when 0 then entry[0] = _INTL("Macho")
+        when 1 then entry[0] = _INTL("Hembra")
         else
-          entry[0] = (multiple_forms) ? _INTL("One Form") : _INTL("Genderless")
+          entry[0] = (multiple_forms) ? _INTL("Forma Normal") : _INTL("Sin Género")
         end
       end
       entry[1] = 0 if entry[1] == 2

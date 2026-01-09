@@ -13,19 +13,16 @@ class PokemonPokedexInfo_Scene
     case @moveListIndex
     when 0  # Level-up moves
       species_data.moves.each do |m|
-        next if @moveList.include?(m)
         @moveCommands.push(GameData::Move.get(m[1]).name)
         @moveList.push(m)
       end
     when 1  # Tutor moves
-      species_data.get_tutor_moves.each do |m|
-        next if @moveList.include?(m)
+      species_data.get_tutor_moves.each do |m| 
         @moveCommands.push(GameData::Move.get(m).name)
         @moveList.push(m)
       end
     when 2  # Egg moves
-      species_data.get_inherited_moves.each do |m|
-        next if @moveList.include?(m)
+      species_data.get_egg_moves.each do |m| 
         @moveCommands.push(GameData::Move.get(m).name)
         @moveList.push(m)
       end
@@ -38,6 +35,8 @@ class PokemonPokedexInfo_Scene
     when 4  # Max Moves
       pbGenerateMaxMoves(species_data, special_form)
     end
+    @moveCommands.uniq!
+    @moveList.uniq!
     @sprites["movecmds"].commands = @moveCommands
     @sprites["movecmds"].index = 0
   end
@@ -51,7 +50,7 @@ class PokemonPokedexInfo_Scene
     allMoves = []
     species.moves.each { |m| allMoves.push(m[1]) }
     allMoves.concat(species.get_tutor_moves.clone)
-    allMoves.concat(species.get_inherited_moves.clone)
+    allMoves.concat(species.get_egg_moves.clone)
     allMoves.uniq!
     @zcrystals.each do |item|
       if item.has_zmove_combo?
@@ -83,7 +82,7 @@ class PokemonPokedexInfo_Scene
     allMoves = []
     species.moves.each { |m| allMoves.push(m[1]) }
     allMoves.concat(species.get_tutor_moves.clone)
-    allMoves.concat(species.get_inherited_moves.clone)
+    allMoves.concat(species.get_egg_moves.clone)
     allMoves.uniq!
     maxGuard = false
     @maxmoves.each do |type, id|
@@ -175,7 +174,8 @@ class PokemonPokedexInfo_Scene
           drawPage(@page)
           pbDrawDataNotes
           break
-        elsif @sprites["movecmds"].index != oldcmd
+        end  
+        if @sprites["movecmds"].index != oldcmd
           pbDrawMoveList
         end
       end
@@ -222,11 +222,11 @@ class PokemonPokedexInfo_Scene
       overlay.blt(type_x, 66, @typebitmap2.bitmap, type_rect)
     end
     case @moveListIndex
-    when 0 then title = _INTL("LEVEL-UP")
-    when 1 then title = _INTL("TM/TUTOR")
-    when 2 then title = _INTL("INHERIT")
-    when 3 then title = (@zcrystals) ? _INTL("Z-MOVES") : _INTL("MAX MOVES")
-    when 4 then title = _INTL("MAX MOVES")
+    when 0 then title = _INTL("NIVEL")
+    when 1 then title = _INTL("MT/TUTOR")
+    when 2 then title = _INTL("CRIANZA")
+    when 3 then title = (@zcrystals) ? _INTL("MOVS. Z") : _INTL("MOVS. DINA.")
+    when 4 then title = _INTL("MOVS. DINA.")
     end
     textpos.push([title, 130, 51, :center, base, shadow, :outline])
     #---------------------------------------------------------------------------
@@ -312,10 +312,10 @@ class PokemonPokedexInfo_Scene
       accuracy = selMoveData.accuracy
       movecount = (@sprites["movecmds"].index + 1).to_s + "/" + @moveCommands.length.to_s
       textpos.push(
-        [_INTL("CATEGORY"), 344, 116, :center, base, shadow, :outline],
-        [_INTL("POWER"), 344, 150, :center, base, shadow, :outline],
+        [_INTL("CATEGORÍA"), 344, 116, :center, base, shadow, :outline],
+        [_INTL("POTENCIA"), 344, 150, :center, base, shadow, :outline],
         [power <= 1 ? power == 1 ? "???" : "---" : power.to_s, 468, 150, :center, base2, shadow2],
-        [_INTL("ACCURACY"), 344, 184, :center, base, shadow, :outline],
+        [_INTL("PRECISIÓN"), 344, 184, :center, base, shadow, :outline],
         [accuracy == 0 ? "---" : "#{accuracy}%", 468, 184, :center, base2, shadow2],
         [movecount, 50, 357, :center, base, shadow, :outline]
       )
