@@ -3,6 +3,9 @@ Settings::DEXES_WITH_OFFSETS  = [4]
 module GameData
     class Species
         def self.check_graphic_file(path, species, form = 0, gender = 0, shiny = false, shadow = false, subfolder = "")
+            if species == :BASCULEGION
+                form = gender
+            end
             try_subfolder = sprintf("%s/", subfolder)
             try_species = species
             try_form    = (form > 0) ? sprintf("_%d", form) : ""
@@ -184,7 +187,9 @@ MenuHandlers.add(:pokemon_debug_menu, :species_and_form, {
             when 1   # Set form
                 cmd2 = 0
                 formcmds = [[], []]
-                GameData::Species.each do |sp|
+                GameData::Species::DATA.values
+                .sort_by { |sp| [sp.species.to_s, sp.form] }
+                .each do |sp|
                     next if sp.species != pkmn.species
                     form_name = sp.form_name
                     form_name = _INTL("Forma sin nombre") if !form_name || form_name.empty?
@@ -204,7 +209,7 @@ MenuHandlers.add(:pokemon_debug_menu, :species_and_form, {
                         screen.pbRefreshSingle(pkmnid)
                     end
                 else
-                cmd2 = screen.pbShowCommands(_INTL("Define la forma del Pokémon."), formcmds[1], cmd2)
+                    cmd2 = screen.pbShowCommands(_INTL("Define la forma del Pokémon."), formcmds[1], cmd2)
                 next if cmd2 < 0
                 f = formcmds[0][cmd2]
                 if f != pkmn.form
@@ -600,5 +605,117 @@ class Battle
         end
 
         return true
+    end
+end
+
+class PokemonSummary_Scene
+    def pbScene
+        @pokemon.play_cry
+        loop do
+            Graphics.update
+            Input.update
+            pbUpdate
+            dorefresh = false
+            if Input.trigger?(Input::ACTION)
+                pbSEStop
+                @pokemon.play_cry
+                @show_back = !@show_back
+                if PluginManager.installed?("[DBK] Animated Pokémon System")
+                    @sprites["pokemon"].setSummaryBitmap(@pokemon, @show_back)
+                    @sprites["pokemon"].constrict([208, 164])
+                else
+                    @sprites["pokemon"].setPokemonBitmap(@pokemon, @show_back)
+                end
+                if @show_back
+                    @sprites["pokemon"].zoom_x = 2 / 3.0
+                    @sprites["pokemon"].zoom_y = 2 / 3.0
+                end
+            elsif Input.trigger?(Input::BACK)
+                pbPlayCloseMenuSE
+                break
+            elsif Input.trigger?(Input::SPECIAL) && @page_id == :page_skills
+                pbPlayDecisionSE
+                showAbilityDescription(@pokemon)
+            elsif Input.trigger?(Input::USE)
+                dorefresh = pbPageCustomUse(@page_id)
+                if !dorefresh
+                    case @page_id
+                    when :page_moves
+                        pbPlayDecisionSE
+                        dorefresh = pbOptions
+                    when :page_ribbons
+                        pbPlayDecisionSE
+                        pbRibbonSelection
+                        dorefresh = true
+                    else
+                        if !@inbattle
+                            pbPlayDecisionSE
+                            dorefresh = pbOptions
+                        end
+                    end
+                end
+            elsif Input.repeat?(Input::UP)
+                oldindex = @partyindex
+                pbGoToPrevious
+                if @partyindex != oldindex
+                    pbChangePokemon
+                    @ribbonOffset = 0
+                    dorefresh = true
+                end
+            elsif Input.repeat?(Input::DOWN)
+                oldindex = @partyindex
+                pbGoToNext
+                if @partyindex != oldindex
+                    pbChangePokemon
+                    @ribbonOffset = 0
+                    dorefresh = true
+                end
+            elsif Input.trigger?(Input::JUMPUP) && !@party.is_a?(PokemonBox)
+                oldindex = @partyindex
+                @partyindex = 0
+                if @partyindex != oldindex
+                    pbChangePokemon
+                    @ribbonOffset = 0
+                    dorefresh = true
+                end
+            elsif Input.trigger?(Input::JUMPDOWN) && !@party.is_a?(PokemonBox)
+                oldindex = @partyindex
+                @partyindex = @party.length - 1
+                if @partyindex != oldindex
+                    pbChangePokemon
+                    @ribbonOffset = 0
+                    dorefresh = true
+                end
+            elsif Input.repeat?(Input::LEFT)
+                oldpage = @page
+                numpages = @page_list.length
+                @page -= 1
+                @page = numpages if @page < 1
+                @page = 1 if @page > numpages
+                if @page != oldpage
+                    pbSEPlay("GUI summary change page")
+                    @ribbonOffset = 0
+                    dorefresh = true
+                end
+            elsif Input.repeat?(Input::RIGHT)
+                oldpage = @page
+                numpages = @page_list.length
+                @page += 1
+                @page = numpages if @page < 1
+                @page = 1 if @page > numpages
+                if @page != oldpage
+                    pbSEPlay("GUI summary change page")
+                    @ribbonOffset = 0
+                    dorefresh = true
+                end
+            end
+            @show_back = false if dorefresh
+            if !@show_back
+                @sprites["pokemon"].zoom_x = 1.0
+                @sprites["pokemon"].zoom_y = 1.0
+            end
+            drawPage(@page) if dorefresh
+        end
+        return @partyindex
     end
 end
