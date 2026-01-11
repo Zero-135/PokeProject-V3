@@ -100,9 +100,6 @@ Generation = 7
 Flags = InheritFormWithEverStone
 WildItemUncommon = PECHABERRY
 #-------------------------------
-[PIKACHU,1]
-Generation = 7
-#-------------------------------
 [RAICHU,1]
 FormName = Alolan
 Types = ELECTRIC,PSYCHIC
@@ -426,9 +423,6 @@ Height = 1.4
 Pokedex = The energy of Mega Evolution awakened it. It sinks into another dimension, where it keeps a patient watch for its chance to attack.
 Generation = 6
 #-------------------------------
-[EXEGGCUTE,1]
-Generation = 7
-#-------------------------------
 [EXEGGUTOR,1]
 FormName = Alolan
 Types = GRASS,DRAGON
@@ -456,9 +450,6 @@ Weight = 34.0
 Color = Purple
 Pokedex = Its custom is to mourn its lost companions. Mounds of dirt by the side of the road mark the graves of the Marowak.
 Generation = 7
-#-------------------------------
-[KOFFING,1]
-Generation = 8
 #-------------------------------
 [WEEZING,1]
 FormName = Galarian
@@ -608,10 +599,6 @@ Height = 1.5
 Weight = 33.0
 Pokedex = Despite its diminished size, its mental power has grown phenomenally. With a mere thought, it can smash a skyscraper to smithereens.
 Generation = 6
-#-------------------------------
-[PICHU,1]
-Generation = 7
-Flags = CannotDynamax
 #-------------------------------
 [PICHU,2]
 FormName = Spiky-Eared
@@ -1154,9 +1141,6 @@ Weight = 28.3
 Pokedex = It swings its ears like whips and strikes its enemies with them. It has an intensely combative disposition.
 Generation = 6
 #-------------------------------
-[MIMEJR,1]
-Generation = 8
-#-------------------------------
 [GARCHOMP,1]
 FormName = Mega Garchomp
 MegaStone = GARCHOMPITE
@@ -1466,6 +1450,14 @@ Abilities = VOLTABSORB
 HiddenAbilities = VOLTABSORB
 Height = 3.0
 Shape = BipedalTail
+#-------------------------------
+[RESHIRAM,1]
+FormName = In Overdrive
+Pokedex = In its Overdrive state, Reshiram’s flames surge beyond control, turning its body into a roaring inferno. Its burning wings can melt stone, and its power is said to embody absolute truth.
+#-------------------------------
+[ZEKROM,1]
+FormName = In Overdrive
+Pokedex = In its Overdrive state, Zekrom overflows with violent lightning, its body crackling with relentless energy. Each thunderous strike is said to enforce ideals through overwhelming power.
 #-------------------------------
 [LANDORUS,1]
 FormName = Therian Forme
@@ -2007,6 +1999,16 @@ Flags = InheritFormFromMother
 FormName = Busted Form
 Pokedex = Sad that its true identity may be exposed, Mimikyu will mercilessly seek revenge on any opponent that breaks its neck.
 #-------------------------------
+[SOLGALEO,1]
+FormName = Radiant Sun phase
+Color = Yellow
+Pokedex = In its Radiant Sun Phase, Solgaleo blazes like a newborn star, its body radiating intense heat and light. Legends say its roar announces the birth of a new dawn.
+#-------------------------------
+[LUNALA,1]
+FormName = Full Moon phase
+Color = Blue
+Pokedex = In its Full Moon Phase, Lunala shines with pale lunar light, cloaking the world in silence. Under a full moon, it is said to bend shadows and open unseen paths.
+#-------------------------------
 [NECROZMA,1]
 FormName = Dusk Mane
 Types = PSYCHIC,STEEL
@@ -2057,6 +2059,11 @@ Flags = Legendary,CannotDynamax
 FormName = Original Color
 Color = Red
 Pokedex = This gorgeous Magearna looks as it did at the time of its invention. Its luxurious decoration pleased the king's daughter.
+#-------------------------------
+[MARSHADOW,1]
+FormName = Zenith Marshadow
+Color = Green
+Pokedex = When angered or attacking, Marshadow's fighting spirit will begin to burn, turning it into Zenith Marshadow
 #-------------------------------
 [CRAMORANT,1]
 FormName = Gulping Form
@@ -2323,6 +2330,10 @@ Types = FIGHTING,WATER
 Moves = 0,SURGINGSTRIKES,1,AQUAJET,1,ROCKSMASH,1,LEER,1,FOCUSENERGY,1,ENDURE,12,AERIALACE,16,SCARYFACE,20,HEADBUTT,24,BRICKBREAK,28,DETECT,32,BULKUP,36,IRONHEAD,40,DYNAMICPUNCH,44,COUNTER,48,CLOSECOMBAT,52,FOCUSPUNCH
 TutorMoves = ACROBATICS,AERIALACE,AURASPHERE,BODYPRESS,BODYSLAM,BRICKBREAK,BULKUP,CHILLINGWATER,CLOSECOMBAT,COACHING,DIG,DOUBLEEDGE,DRAINPUNCH,ENDURE,FACADE,FALSESWIPE,FIREPUNCH,FLING,FOCUSBLAST,FOCUSPUNCH,GIGAIMPACT,HELPINGHAND,ICEPUNCH,ICESPINNER,IRONDEFENSE,IRONHEAD,LIQUIDATION,LOWKICK,LOWSWEEP,POISONJAB,PROTECT,RAINDANCE,REST,REVERSAL,ROCKSLIDE,ROCKTOMB,SCARYFACE,SLEEPTALK,STONEEDGE,SUBSTITUTE,SWIFT,SWORDSDANCE,TAKEDOWN,TAUNT,THUNDERPUNCH,TRAILBLAZE,UTURN,WATERFALL,WHIRLPOOL,ZENHEADBUTT
 Pokedex = It's believed that this Pokémon modeled its fighting style on the flow of a river—sometimes rapid, sometimes calm.
+#-------------------------------
+[ZARUDE,1]
+FormName = Dada
+Pokedex = This Zarude's special strength stems from its love and care for an orphaned human child that the Pokémon has raised since the child's infancy.
 #-------------------------------
 [CALYREX,1]
 FormName = Ice Rider
