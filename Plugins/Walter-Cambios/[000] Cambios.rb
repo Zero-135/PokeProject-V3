@@ -1,5 +1,9 @@
+#Victini
 Settings::DEXES_WITH_OFFSETS  = [4]
+#Formas en la Pokedex
+Settings::DEX_SHOWS_ALL_FORMS = false
 
+#Imagenes
 module GameData
     class Species
         def self.check_graphic_file(path, species, form = 0, gender = 0, shiny = false, shadow = false, subfolder = "")
@@ -41,6 +45,7 @@ module GameData
     end
 end
 
+#Modificaciones en tamaño de Pokédex Vistos y Obtenidos
 class PokemonPokedexMenu_Scene
     def pbStartScene(commands, commands2)
         @commands = commands
@@ -64,32 +69,152 @@ class PokemonPokedexMenu_Scene
 end
 
 class PokemonPokedexInfo_Scene
-    alias walter_pbUpdateDummyPokemon pbUpdateDummyPokemon
-    def pbUpdateDummyPokemon
-        walter_pbUpdateDummyPokemon
-        @species = @dexlist[@index][:species]
-        @gender, @form, _shiny = $player.pokedex.last_form_seen(@species)
-        @shiny = _shiny
-        @sprites["infosprite"].setSpeciesBitmap(@species, @gender, @form, @shiny)
-        @sprites["formfront"]&.setSpeciesBitmap(@species, @gender, @form, @shiny)
-        if @sprites["formback"]
-            @sprites["formback"].setSpeciesBitmap(@species, @gender, @form, @shiny, false, true)
+    #Permite ver Shinies en la Pokédex
+    def pbScene
+        @available = pbGetAvailableForms(false)
+        @available_shiny = pbGetAvailableForms(true)
+        Pokemon.play_cry(@species, @form)
+        loop do
+            Graphics.update
+            Input.update
+            pbUpdate
+            dorefresh = false
+            if Input.trigger?(Input::ACTION)
+                pbSEStop
+                Pokemon.play_cry(@species, @form) if @page == 1
+            elsif Input.trigger?(Input::BACK)
+                pbPlayCloseMenuSE
+                break
+            elsif Input.trigger?(Input::USE)
+                ret = pbPageCustomUse(@page_id)
+                if !ret
+                    case @page_id
+                        when :page_info
+                            pbPlayDecisionSE
+                            @show_battled_count = !@show_battled_count
+                            dorefresh = true
+                        when :page_forms
+                            if @available.length + @available_shiny.length > 1
+                                pbPlayDecisionSE
+                                pbChooseForm
+                                dorefresh = true
+                            end
+                        end
+                    else
+                    dorefresh = true
+                end
+            elsif Input.repeat?(Input::UP)
+                oldindex = @index
+                pbGoToPrevious
+                if @index != oldindex
+                    pbUpdateDummyPokemon
+                    @available = pbGetAvailableForms(false)
+                    @available_shiny = pbGetAvailableForms(true)
+                    pbSEStop
+                    (@page == 1) ? Pokemon.play_cry(@species, @form) : pbPlayCursorSE
+                    dorefresh = true
+                end
+            elsif Input.repeat?(Input::DOWN)
+                oldindex = @index
+                pbGoToNext
+                if @index != oldindex
+                    pbUpdateDummyPokemon
+                    @available = pbGetAvailableForms(false)
+                    @available_shiny = pbGetAvailableForms(true)
+                    pbSEStop
+                    (@page == 1) ? Pokemon.play_cry(@species, @form) : pbPlayCursorSE
+                    dorefresh = true
+                end
+            elsif Input.repeat?(Input::LEFT)
+                oldpage = @page
+                numpages = @page_list.length
+                @page -= 1
+                @page = numpages if @page < 1
+                @page = 1 if @page > numpages 
+                if @page != oldpage
+                    pbPlayCursorSE
+                    dorefresh = true
+                end
+            elsif Input.repeat?(Input::RIGHT)
+                oldpage = @page
+                numpages = @page_list.length
+                @page += 1
+                @page = numpages if @page < 1
+                @page = 1 if @page > numpages
+                if @page != oldpage
+                    pbPlayCursorSE
+                    dorefresh = true
+                end
+            end
+            drawPage(@page) if dorefresh
         end
-        @sprites["formicon"]&.pbSetParams(@species, @gender, @form, @shiny)
+        return @index
     end
 
+    #Revisa si se ha visualizado la forma shiny
+    def pbGetAvailableForms(shiny = nil)
+        ret = []
+        multiple_forms = false
+        GameData::Species.each do |sp|
+            next if sp.species != @species
+            next if sp.form != 0 && (!sp.real_form_name || sp.real_form_name.empty?)
+            next if sp.pokedex_form != sp.form
+            multiple_forms = true if sp.form > 0
+            if sp.single_gendered?
+                real_gender = (sp.gender_ratio == :AlwaysFemale) ? 1 : 0
+                next if !$player.pokedex.seen_form?(@species, real_gender, sp.form, shiny) && !Settings::DEX_SHOWS_ALL_FORMS
+                real_gender = 2 if sp.gender_ratio == :Genderless
+                ret.push([sp.form_name, real_gender, sp.form])
+            elsif !gender_difference?(sp.form)
+                2.times do |real_gndr|
+                    next if !$player.pokedex.seen_form?(@species, real_gndr, sp.form, shiny) && !Settings::DEX_SHOWS_ALL_FORMS
+                    ret.push([sp.form_name || _INTL("Forma Normal"), 0, sp.form])
+                    break
+                end
+            elsif sp.form_name == _INTL("Macho") || sp.form_name == _INTL("Hembra")
+                next if !$player.pokedex.seen_form?(@species, sp.form, sp.form, shiny) && !Settings::DEX_SHOWS_ALL_FORMS
+                ret.push([sp.form_name, sp.form, sp.form])
+            else
+                g = [_INTL("Macho"), _INTL("Hembra")]
+                2.times do |real_gndr|
+                    next if !$player.pokedex.seen_form?(@species, real_gndr, sp.form, shiny) && !Settings::DEX_SHOWS_ALL_FORMS
+                    form_name = (sp.form_name) ? sp.form_name + " " + g[real_gndr] : g[real_gndr]
+                    ret.push([form_name, real_gndr, sp.form]) 
+                end
+            end
+        end
+        ret.sort! { |a, b| (a[2] == b[2]) ? a[1] <=> b[1] : a[2] <=> b[2] }
+        ret.each do |entry|
+            if entry[0]
+                entry[0] = "" if !multiple_forms && !gender_difference?(entry[2])
+            else
+                case entry[1]
+                    when 0 then entry[0] = _INTL("Macho")
+                    when 1 then entry[0] = _INTL("Hembra")
+                else
+                    entry[0] = (multiple_forms) ? _INTL("Forma Normal") : _INTL("Sin Género")
+                end
+            end
+            entry[1] = 0 if entry[1] == 2
+        end
+        return ret
+    end
+
+    #Flechas en Formas del Poke en Pokedex
     def pbChooseForm
         index = 0
-        @available.length.times do |i|
-            if @available[i][1] == @gender && @available[i][2] == @form
+        @availablePokedex = @available.length > 0 ? @available : @available_shiny
+
+        @availablePokedex.length.times do |i|
+            if @availablePokedex[i][1] == @gender && @availablePokedex[i][2] == @form
                 index = i
                 break
             end
         end
         oldindex = -1
-        old_shiny = true
-        #Agregado para observar las versiones shiny
-        shiny = false
+        shiny = @shiny
+        old_shiny = !shiny
+
         @sprites["leftarrow"] = AnimatedSprite.new("Graphics/UI/left_arrow", 8, 40, 28, 2, @viewport)
         @sprites["leftarrow"].x = 172
         @sprites["leftarrow"].y = 308
@@ -101,14 +226,15 @@ class PokemonPokedexInfo_Scene
         @sprites["rightarrow"].play
         @sprites["rightarrow"].visible = false
         loop do
+            @availablePokedex = shiny ? @available_shiny : @available
             if oldindex != index || old_shiny != shiny
-                $player.pokedex.set_last_form_seen(@species, @available[index][1], @available[index][2], shiny)
+                $player.pokedex.set_last_form_seen(@species, @availablePokedex[index][1], @availablePokedex[index][2], shiny)
                 pbUpdateDummyPokemon
                 drawPage(@page)
                 @sprites["uparrow"].visible   = (index > 0)
-                @sprites["downarrow"].visible = (index < @available.length - 1)
-                @sprites["rightarrow"].visible = !shiny
-                @sprites["leftarrow"].visible = shiny
+                @sprites["downarrow"].visible = (index < @availablePokedex.length - 1)
+                @sprites["rightarrow"].visible = !shiny && (@available_shiny.length > 0)
+                @sprites["leftarrow"].visible = shiny && (@available.length > 0)
                 oldindex = index
                 old_shiny = shiny
             end
@@ -117,18 +243,22 @@ class PokemonPokedexInfo_Scene
             pbUpdate
             if Input.trigger?(Input::UP)
                 pbPlayCursorSE
-                #index = (index + @available.length - 1) % @available.length
-                index = index != 0 ? index - 1 : 0
+                index = (index != 0) ? index - 1 : 0
             elsif Input.trigger?(Input::DOWN)
                 pbPlayCursorSE
-                #index = (index + 1) % @available.length
-                index = index != @available.length - 1 ? index + 1 : @available.length - 1
+                index = (index != @availablePokedex.length - 1) ? index + 1 : @availablePokedex.length - 1
             elsif Input.trigger?(Input::RIGHT)
                 pbPlayCursorSE
-                shiny = true
+                if @available_shiny.length > 0
+                    shiny = true
+                    index = (index < @available_shiny.length) ? index : @available_shiny.length - 1
+                end
             elsif Input.trigger?(Input::LEFT)
                 pbPlayCursorSE
-                shiny = false
+                if @available.length > 0
+                    shiny = false
+                    index = (index < @available.length) ? index : @available.length - 1
+                end
             elsif Input.trigger?(Input::BACK)
                 pbPlayCancelSE
                 break
@@ -141,10 +271,62 @@ class PokemonPokedexInfo_Scene
         @sprites["downarrow"].visible = false
         @sprites["rightarrow"].visible = false
         @sprites["leftarrow"].visible = false
-        $player.pokedex.set_last_form_seen(@species, 0, 0, false)
+        #$player.pokedex.set_last_form_seen(@species, 0, 0, false)
+    end
+
+    #Imagen Pokedex Back y Shiny
+    alias walter_pbUpdateDummyPokemon pbUpdateDummyPokemon
+    def pbUpdateDummyPokemon
+        walter_pbUpdateDummyPokemon
+        @species = @dexlist[@index][:species]
+        @gender, @form, @shiny = $player.pokedex.last_form_seen(@species)
+        @sprites["infosprite"].setSpeciesBitmap(@species, @gender, @form, @shiny)
+        @sprites["formfront"]&.setSpeciesBitmap(@species, @gender, @form, @shiny)
+        if @sprites["formback"]
+            @sprites["formback"].setSpeciesBitmap(@species, @gender, @form, @shiny, false, true)
+        end
+        @sprites["formicon"]&.pbSetParams(@species, @gender, @form, @shiny)
+    end
+
+    #Muestra el genero del Pokemon Shiny
+    def drawPageForms
+        #Nuevo
+        @sprites["formfront"].visible     = true
+        @sprites["formback"].visible      = true
+        @sprites["formicon"].visible      = true
+
+        #Antiguo
+        @sprites["background"].setBitmap(_INTL("Graphics/UI/Pokedex/bg_forms"))
+        overlay = @sprites["overlay"].bitmap
+        base   = Color.new(88, 88, 80)
+        shadow = Color.new(168, 184, 184)
+        # Write species and form name
+        formname = ""
+        if @shiny
+            @available_shiny.each do |i|
+                if i[1] == @gender && i[2] == @form
+                    formname = i[0]
+                    break
+                end
+            end
+        else
+            @available.each do |i|
+                if i[1] == @gender && i[2] == @form
+                    formname = i[0]
+                    break
+                end
+            end
+        end
+        textpos = [
+        [GameData::Species.get(@species).name, Graphics.width / 2, Graphics.height - 82, :center, base, shadow],
+        [formname, Graphics.width / 2, Graphics.height - 50, :center, base, shadow]
+        ]
+        # Draw all text
+        pbDrawTextPositions(overlay, textpos)
     end
 end
 
+#Orden Pokedex Specie
 def pbChooseFromGameDataList(game_data, default = nil)
     if !GameData.const_defined?(game_data.to_sym)
         raise _INTL("No se encuentra la clase {1} en el módulo GameData.", game_data.to_s)
@@ -161,7 +343,7 @@ def pbChooseFromGameDataList(game_data, default = nil)
     return pbChooseList(commands, default, nil, num_sort)
 end
 
-
+#Orden en las Formas
 MenuHandlers.add(:pokemon_debug_menu, :species_and_form, {
   "name"   => _INTL("Especie/forma..."),
   "parent" => :main,
@@ -198,9 +380,6 @@ MenuHandlers.add(:pokemon_debug_menu, :species_and_form, {
                     formcmds[1].push(form_name)
                     cmd2 = formcmds[0].length - 1 if pkmn.form == sp.form
                 end
-                paired = formcmds[0].zip(formcmds[1])
-                paired.sort_by! { |x| x[0] }
-                formcmds[0], formcmds[1] = paired.transpose
                 if formcmds[0].length <= 1
                     screen.pbDisplay(_INTL("La especie {1} solo tiene una forma.", pkmn.speciesName))
                     if pkmn.form != 0 && screen.pbConfirm(_INTL("¿Quieres reiniciar la forma a la 0?"))
@@ -231,85 +410,7 @@ MenuHandlers.add(:pokemon_debug_menu, :species_and_form, {
   }
 })
 
-class PokemonPokedexInfo_Scene
-    def pbScene
-        Pokemon.play_cry(@species, @form)
-        loop do
-            Graphics.update
-            Input.update
-            pbUpdate
-            dorefresh = false
-            if Input.trigger?(Input::ACTION)
-                pbSEStop
-                Pokemon.play_cry(@species, @form) if @page == 1
-            elsif Input.trigger?(Input::BACK)
-                pbPlayCloseMenuSE
-                break
-            elsif Input.trigger?(Input::USE)
-                ret = pbPageCustomUse(@page_id)
-                if !ret
-                    case @page_id
-                        when :page_info
-                            pbPlayDecisionSE
-                            @show_battled_count = !@show_battled_count
-                            dorefresh = true
-                        when :page_forms
-                            #if @available.length > 1
-                                pbPlayDecisionSE
-                                pbChooseForm
-                                dorefresh = true
-                            #end
-                        end
-                    else
-                    dorefresh = true
-                end
-            elsif Input.repeat?(Input::UP)
-                oldindex = @index
-                pbGoToPrevious
-                if @index != oldindex
-                    pbUpdateDummyPokemon
-                    @available = pbGetAvailableForms
-                    pbSEStop
-                    (@page == 1) ? Pokemon.play_cry(@species, @form) : pbPlayCursorSE
-                    dorefresh = true
-                end
-            elsif Input.repeat?(Input::DOWN)
-                oldindex = @index
-                pbGoToNext
-                if @index != oldindex
-                    pbUpdateDummyPokemon
-                    @available = pbGetAvailableForms
-                    pbSEStop
-                    (@page == 1) ? Pokemon.play_cry(@species, @form) : pbPlayCursorSE
-                    dorefresh = true
-                end
-            elsif Input.repeat?(Input::LEFT)
-                oldpage = @page
-                numpages = @page_list.length
-                @page -= 1
-                @page = numpages if @page < 1
-                @page = 1 if @page > numpages 
-                if @page != oldpage
-                    pbPlayCursorSE
-                    dorefresh = true
-                end
-            elsif Input.repeat?(Input::RIGHT)
-                oldpage = @page
-                numpages = @page_list.length
-                @page += 1
-                @page = numpages if @page < 1
-                @page = 1 if @page > numpages
-                if @page != oldpage
-                    pbPlayCursorSE
-                    dorefresh = true
-                end
-            end
-            drawPage(@page) if dorefresh
-        end
-        return @index
-  end
-end
-
+#Pregunta si se añade el poke al equipo
 def pbAddPokemon(pkmn, level = 1, see_form = true)
   return false if !pkmn
   if pbBoxesFull?
@@ -498,6 +599,7 @@ def pbNicknameAndStore(pkmn)
     pbMessage(_INTL("Se envió {1} a la caja \"{2}\"!", pkmn.name, box_name))
 end
 
+#Queremos que viaje la forma al momento de la creacion del poke
 class Pokemon
     def initialize(species, level, owner = $player, withMoves = true, recheck_form = true)
         species_data = GameData::Species.get(species)
@@ -586,6 +688,7 @@ if Settings::USE_NEW_EXP_SHARE
     end
 end
 
+#Movimiento Combate
 class Battle
     def pbRegisterMove(idxBattler, idxMove, showMessages = true)
         battler = @battlers[idxBattler]
@@ -608,6 +711,7 @@ class Battle
     end
 end
 
+#Adicion de la descripcion de habilidades
 class PokemonSummary_Scene
     def pbScene
         @pokemon.play_cry
@@ -720,4 +824,5 @@ class PokemonSummary_Scene
     end
 end
 
+#Copiar los atributos de Quilava a Cyndaquil
 MultipleForms.copy(:QUILAVA, :CYNDAQUIL, :DEWOTT, :DARTRIX, :PETILIL, :RUFFLET, :GOOMY, :BERGMITE)
