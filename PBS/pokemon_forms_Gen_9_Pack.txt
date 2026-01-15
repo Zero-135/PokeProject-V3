@@ -519,6 +519,10 @@ Shape = Head
 Pokedex = In this form, Terapagos resembles the world as the ancients saw it, and its Terastal energy is abnormally amplified.
 Flags = Legendary,TeraType_STELLAR,CannotDynamax
 #-------------------------------
+[PECHARUNT,1]
+FormName = Inside Shell
+Pokedex = While sealed inside its shell, Pecharunt suppresses its toxic aroma and lies dormant. Despite its stillness, its corrupting influence slowly seeps through the shell.
+#-------------------------------
 # PLZA
 #-------------------------------
 [CLEFABLE,1]

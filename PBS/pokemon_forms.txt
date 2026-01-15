@@ -1489,6 +1489,7 @@ Height = 3.3
 Pokedex = It's said that this Pokémon battles in order to protect the ideal world that will exist in the future for people and Pokémon.
 #-------------------------------
 [KYUREM,3]
+FormName = White Kyurem In Overdrive
 PokedexForm = 1
 BaseStats = 125,120,90,95,170,100
 BaseExp = 350
@@ -1498,6 +1499,7 @@ Moves = 1,DRAGONRAGE,1,ICYWIND,8,IMPRISON,15,ANCIENTPOWER,22,ICEBEAM,29,DRAGONBR
 Height = 3.6
 #-------------------------------
 [KYUREM,4]
+FormName = Black Kyurem In Overdrive
 PokedexForm = 2
 BaseStats = 125,170,100,95,120,90
 BaseExp = 350
@@ -1765,6 +1767,7 @@ Pokedex = This is Zygarde's perfected form. From the orifice on its chest, it ra
 Generation = 7
 #-------------------------------
 [ZYGARDE,3]
+FormName = Complete Forme
 PokedexForm = 2
 BaseStats = 216,100,121,85,91,95
 BaseExp = 354
@@ -1774,6 +1777,54 @@ Height = 4.5
 Weight = 610.0
 Color = Black
 Shape = BipedalTail
+#-------------------------------
+[ZYGARDE,6]
+FormName = Zygarde Core
+BaseStats = 10,10,10,10,10,10
+GenderRatio = Genderless
+GrowthRate = Slow
+BaseExp = 1
+EVs = HP,1
+CatchRate = 255
+Happiness = 0
+Abilities = POWERCONSTRUCT
+Moves = 1,THOUSANDARROWS
+TutorMoves = BIND
+EggGroups = Undiscovered
+HatchSteps = 1
+Height = 0.5
+Weight = 1.0
+Color = Green
+Shape = Serpentine
+Habitat = Rare
+Category = Core
+Pokedex = A Zygarde Core serves as the brain of Zygarde. It commands the Cells and directs their assembly, maintaining balance within the ecosystem.
+Generation = 7
+Flags = Legendary
+#-------------------------------
+[ZYGARDE,7]
+FormName = Zygarde Cell
+BaseStats = 1,1,1,1,1,1
+GenderRatio = Genderless
+GrowthRate = Slow
+BaseExp = 1
+EVs = HP,1
+CatchRate = 255
+Happiness = 0
+Abilities = POWERCONSTRUCT
+Moves = 1,THOUSANDARROWS
+TutorMoves = BIND
+EggGroups = Undiscovered
+HatchSteps = 1
+Height = 0.2
+Weight = 0.1
+Color = Green
+Shape = Serpentine
+Habitat = Rare
+Category = Cell
+Pokedex = A Zygarde Cell is a tiny component of Zygarde that observes the ecosystem. By itself it cannot battle, but it gathers information needed to restore Zygarde’s true form.
+Generation = 7
+Flags = Legendary
 #-------------------------------
 [DIANCIE,1]
 FormName = Mega Diancie
@@ -2045,6 +2096,7 @@ Pokedex = The light pouring out from all over its body affects living things and
 Flags = Legendary,CannotDynamax
 #-------------------------------
 [NECROZMA,4]
+FormName = Ultra Necrozma
 PokedexForm = 3
 Types = PSYCHIC,DRAGON
 BaseStats = 97,167,97,129,167,97
@@ -2316,6 +2368,14 @@ BaseExp = 360
 Weight = 355.0
 Pokedex = Able to cut down anything with a single strike, it became known as the Fairy King's Sword, and it inspired awe in friend and foe alike.
 #-------------------------------
+[ZACIAN,2]
+FormName = Behemoth Blade
+Types = FAIRY,STEEL
+BaseStats = 92,150,115,148,80,115
+BaseExp = 360
+Weight = 355.0
+Pokedex = When Zacian unleashes Behemoth Blade, its flowing mane expands and merges with its sword, greatly increasing its size. In this form, a single strike is said to cleave through even the strongest defenses.
+#-------------------------------
 [ZAMAZENTA,1]
 FormName = Crowned Shield
 Types = FIGHTING,STEEL
@@ -2323,6 +2383,14 @@ BaseStats = 92,120,140,128,80,140
 BaseExp = 360
 Weight = 785.0
 Pokedex = Its ability to deflect any attack led to it being known as the Fighting Master's Shield. It was feared and respected by all.
+#-------------------------------
+[ZAMAZENTA,2]
+FormName = Behemoth Bash
+Types = FIGHTING,STEEL
+BaseStats = 92,120,140,128,80,140
+BaseExp = 360
+Weight = 785.0
+Pokedex = When Zamazenta uses Behemoth Bash, its shield expands and hardens, amplifying the force of its charge. This form turns its defense into an unstoppable offensive blow.
 #-------------------------------
 [URSHIFU,1]
 FormName = Rapid Strike Style

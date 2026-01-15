@@ -684,7 +684,7 @@ if Settings::USE_NEW_EXP_SHARE
             $PokemonSystem.expshareon ||= 0
             @expshare = ($PokemonGlobal&.expshare_enabled && $PokemonSystem.expshareon == 0) || 
                        $player&.has_exp_all
-        end 
+        end
     end
 end
 
@@ -826,3 +826,284 @@ end
 
 #Copiar los atributos de Quilava a Cyndaquil
 MultipleForms.copy(:QUILAVA, :CYNDAQUIL, :DEWOTT, :DARTRIX, :PETILIL, :RUFFLET, :GOOMY, :BERGMITE)
+
+#Actualizacion de las formas de los pokes legendarios
+MultipleForms.register(:RESHIRAM, {
+  "getFormOnLeavingBattle" => proc { |pkmn, battle, usedInBattle, endBattle|
+    next 0 if pkmn.form >= 1
+  }
+})
+
+MultipleForms.register(:ZEKROM, {
+  "getFormOnLeavingBattle" => proc { |pkmn, battle, usedInBattle, endBattle|
+    next 0 if pkmn.form >= 1
+  }
+})
+
+MultipleForms.register(:KYUREM, {
+  "getFormOnLeavingBattle" => proc { |pkmn, battle, usedInBattle, endBattle|
+    next pkmn.form - 2 if pkmn.form >= 3   # Fused forms stop glowing
+  },
+  "onSetForm" => proc { |pkmn, form, oldForm|
+    case form
+    when 0   # Normal
+      pkmn.moves.each_with_index do |move, i|
+        case move.id
+        when :ICEBURN, :FREEZESHOCK
+          next if !GameData::Move.exists?(:GLACIATE)
+          if pkmn.hasMove?(:GLACIATE)
+            pkmn.moves[i] = nil
+          else
+            move.id = :GLACIATE
+          end
+        when :FUSIONFLARE, :FUSIONBOLT
+          next if !GameData::Move.exists?(:SCARYFACE)
+          if pkmn.hasMove?(:SCARYFACE)
+            pkmn.moves[i] = nil
+          else
+            move.id = :SCARYFACE
+          end
+        end
+        pkmn.moves.compact!
+      end
+    when 1   # White
+      pkmn.moves.each do |move|
+        case move.id
+        when :GLACIATE
+          next if !GameData::Move.exists?(:ICEBURN) || pkmn.hasMove?(:ICEBURN)
+          move.id = :ICEBURN
+        when :SCARYFACE
+          next if !GameData::Move.exists?(:FUSIONFLARE) || pkmn.hasMove?(:FUSIONFLARE)
+          move.id = :FUSIONFLARE
+        end
+      end
+    when 2   # Black
+      pkmn.moves.each do |move|
+        case move.id
+        when :GLACIATE
+          next if !GameData::Move.exists?(:FREEZESHOCK) || pkmn.hasMove?(:FREEZESHOCK)
+          move.id = :FREEZESHOCK
+        when :SCARYFACE
+          next if !GameData::Move.exists?(:FUSIONBOLT) || pkmn.hasMove?(:FUSIONBOLT)
+          move.id = :FUSIONBOLT
+        end
+      end
+    end
+  }
+})
+
+MultipleForms.register(:ZACIAN, {
+  "changePokemonOnStartingBattle" => proc { |pkmn, battle|
+    if GameData::Move.exists?(:BEHEMOTHBLADE) && pkmn.hasItem?(:RUSTEDSWORD)
+      pkmn.moves.each { |move| move.id = :BEHEMOTHBLADE if move.id == :IRONHEAD }
+    end
+  },
+  "getFormOnLeavingBattle" => proc { |pkmn, battle, usedInBattle, endBattle|
+    next 0 if endBattle
+  },
+  "changePokemonOnLeavingBattle" => proc { |pkmn, battle, usedInBattle, endBattle|
+    if endBattle
+      pkmn.moves.each { |move| move.id = :IRONHEAD if move.id == :BEHEMOTHBLADE }
+    end
+  }
+})
+
+MultipleForms.register(:ZAMAZENTA, {
+  "changePokemonOnStartingBattle" => proc { |pkmn, battle|
+    if GameData::Move.exists?(:BEHEMOTHBASH) && pkmn.hasItem?(:RUSTEDSHIELD)
+      pkmn.moves.each { |move| move.id = :BEHEMOTHBASH if move.id == :IRONHEAD }
+    end
+  },
+  "getFormOnLeavingBattle" => proc { |pkmn, battle, usedInBattle, endBattle|
+    next 0 if endBattle
+  },
+  "changePokemonOnLeavingBattle" => proc { |pkmn, battle, usedInBattle, endBattle|
+    if endBattle
+      pkmn.moves.each { |move| move.id = :IRONHEAD if move.id == :BEHEMOTHBASH }
+    end
+  }
+})
+
+MultipleForms.register(:XERNEAS, {
+  "getFormOnLeavingBattle" => proc { |pkmn, battle, usedInBattle, endBattle|
+    next 0 if endBattle
+  }
+})
+
+class Battle::Battler
+    #Modificaciones para las formas de Reshiram, Zekrom y Kyurem
+    alias new_forms_pbCheckForm pbCheckForm
+    def pbCheckForm(endOfRound = false)
+        new_forms_pbCheckForm(endOfRound)
+        if isSpecies?(:RESHIRAM) && self.ability == :TURBOBLAZE && @form == 0
+            pbChangeForm(1, _INTL(""))
+        end
+        if isSpecies?(:ZEKROM) && self.ability == :TERAVOLT && @form == 0
+            pbChangeForm(1, _INTL(""))
+        end
+        if isSpecies?(:KYUREM) && (@form == 1 || @form == 2)
+            pbChangeForm(@form + 2, _INTL(""))
+        end
+        if isSpecies?(:ZACIAN)
+            if hasActiveItem?(:RUSTEDSWORD)
+                pbChangeForm(1, _INTL(""))
+            else
+                pbChangeForm(0, _INTL(""))
+            end
+        end
+        if isSpecies?(:ZAMAZENTA)
+            if hasActiveItem?(:RUSTEDSHIELD)
+                pbChangeForm(1, _INTL(""))
+            else
+                pbChangeForm(0, _INTL(""))
+            end
+        end
+        if isSpecies?(:XERNEAS)
+            pbChangeForm(1, _INTL(""))
+        end
+    end
+
+    #Cambia Formas en Ataques
+    def pbProcessTurn(choice, tryFlee = true)
+        return false if fainted?
+        if tryFlee && wild? &&
+            @battle.rules["alwaysflee"] && @battle.pbCanRun?(@index)
+            pbBeginTurn(choice)
+            wild_flee(_INTL("{1} fled from battle!", pbThis))
+            pbEndTurn(choice)
+            return true
+        end
+        if choice[0] == :Shift
+            idxOther = -1
+            case @battle.pbSideSize(@index)
+            when 2
+                idxOther = (@index + 2) % 4
+            when 3
+                if @index != 2 && @index != 3
+                    idxOther = (@index.even?) ? 2 : 3
+                end
+            end
+            if idxOther >= 0
+                @battle.pbSwapBattlers(@index, idxOther)
+                case @battle.pbSideSize(@index)
+                when 2
+                @battle.pbDisplay(_INTL("{1} moved across!", pbThis))
+                when 3
+                @battle.pbDisplay(_INTL("{1} moved to the center!", pbThis))
+                end
+            end
+            pbBeginTurn(choice)
+            pbCancelMoves
+            @lastRoundMoved = @battle.turnCount
+            return true
+        end
+        if choice[0] != :UseMove
+            pbBeginTurn(choice)
+            pbEndTurn(choice)
+            return false
+        end
+        
+        last_form = @form
+        change = false
+        if isSpecies?(:SOLGALEO) && @form == 0 && (choice[2].id == :SUNSTEELSTRIKE || choice[2].id == :SEARINGSUNRAZESMASH)
+            change = true
+            last_form = @form
+            pbChangeForm(1, _INTL(""))
+        elsif isSpecies?(:LUNALA) && @form == 0 && (choice[2].id == :MOONGEISTBEAM || choice[2].id == :MENACINGMOONRAZEMAELSTROM)
+            change = true
+            last_form = @form
+            pbChangeForm(1, _INTL(""))
+        elsif isSpecies?(:MARSHADOW) && @form == 0 && choice[2].id == :SOULSTEALING7STARSTRIKE
+            change = true
+            last_form = @form
+            pbChangeForm(1, _INTL(""))
+        elsif isSpecies?(:ZACIAN) && @form == 1 && choice[2].id == :BEHEMOTHBLADE
+            change = true
+            last_form = @form
+            pbChangeForm(2, _INTL(""))
+        elsif isSpecies?(:ZAMAZENTA) && @form == 1 && choice[2].id == :BEHEMOTHBASH
+            change = true
+            last_form = @form
+            pbChangeForm(2, _INTL(""))
+        end
+        
+        PBDebug.log("[Use move] #{pbThis} (#{@index}) used #{choice[2].name}")
+        PBDebug.logonerr { pbUseMove(choice, choice[2] == @battle.struggle) }
+
+        if change
+            pbChangeForm(last_form, _INTL(""))
+        end
+
+        @battle.pbJudge
+        @battle.pbCalculatePriority if Settings::RECALCULATE_TURN_ORDER_AFTER_SPEED_CHANGES
+        return true
+    end
+end
+
+#Pikachu Cosplay
+MultipleForms.register(:PIKACHU, {
+  "onSetForm" => proc { |pkmn, form, oldForm|
+    form_moves = [
+      :ICICLECRASH,     # Pikachu Belle
+      :FLYINGPRESS,     # Pikachu Libre
+      :ELECTRICTERRAIN, # Pikachu, Ph.D.
+      :DRAININGKISS,    # Pikachu Pop Star
+      :METEORMASH       # Pikachu Rock Star
+    ]
+    # Find a known move that should be forgotten
+    old_move_index = -1
+    pkmn.moves.each_with_index do |move, i|
+      next if !form_moves.include?(move.id)
+      old_move_index = i
+      break
+    end
+    # Determine which new move to learn (if any)
+    new_move_id = (form > 2) && (form < 8) ? form_moves[form - 3] : nil
+    new_move_id = nil if !GameData::Move.exists?(new_move_id)
+    if new_move_id.nil? && old_move_index >= 0 && pkmn.numMoves == 1
+      new_move_id = :THUNDERSHOCK
+      new_move_id = nil if !GameData::Move.exists?(new_move_id)
+      raise _INTL("Pikachu está intentando olvidar su último movimiento, pero no tiene más movimientos con el que reemplazarlo.") if new_move_id.nil?
+    end
+    new_move_id = nil if pkmn.hasMove?(new_move_id)
+    # Forget a known move (if relevant) and learn a new move (if relevant)
+    if old_move_index >= 0
+      old_move_name = pkmn.moves[old_move_index].name
+      if new_move_id.nil?
+        # Just forget the old move
+        pkmn.forget_move_at_index(old_move_index)
+        pbMessage(_INTL("{1} olvidó {2}...", pkmn.name, old_move_name))
+      else
+        # Replace the old move with the new move (keeps the same index)
+        pkmn.moves[old_move_index].id = new_move_id
+        new_move_name = pkmn.moves[old_move_index].name
+        pbMessage(_INTL("{1} olvidó {2}...", pkmn.name, old_move_name) + "\1")
+        pbMessage("\\se[]" + _INTL("¡{1} aprendió {2}!", pkmn.name, new_move_name) + "\\se[Pkmn move learnt]")
+      end
+    elsif !new_move_id.nil?
+      # Just learn the new move
+      pbLearnMove(pkmn, new_move_id, true)
+    end
+  }
+})
+
+#Correccion Pokemon sin movimientos
+MenuHandlers.add(:pokemon_debug_menu, :forget_move, {
+  "name"   => _INTL("Olvidar movimiento"),
+  "parent" => :moves,
+  "effect" => proc { |pkmn, pkmnid, heldpoke, settingUpBattle, screen|
+    moveindex = screen.pbChooseMove(pkmn, _INTL("Elige un movimiento para olvidarlo."))
+    if pkmn.moves.length == 1
+        movename = pkmn.moves[moveindex].name
+        screen.pbDisplay(_INTL("{1} no puede olvidar {2}, por que es su último movimiento.", pkmn.name, movename))
+        next false
+    end
+    if moveindex >= 0
+      movename = pkmn.moves[moveindex].name
+      pkmn.forget_move_at_index(moveindex)
+      screen.pbDisplay(_INTL("{1} olvidó {2}.", pkmn.name, movename))
+      screen.pbRefreshSingle(pkmnid)
+    end
+    next false
+  }
+})
