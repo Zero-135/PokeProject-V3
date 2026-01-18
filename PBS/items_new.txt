@@ -1,0 +1,18 @@
+#-------------------------------
+[PIKACHUCATALOG]
+Name = Pikachu Catalog
+NamePlural = Pikachu Catalogs
+Pocket = 8
+Price = 0
+FieldUse = OnPokemon
+Flags = KeyItem
+Description = A special catalog that allows Pikachu to switch into its Coquette outfit, changing its style at will.
+#-------------------------------
+[SCISSORS]
+Name = Scissors
+NamePlural = Scissors
+Pocket = 8
+Price = 0
+FieldUse = OnPokemon
+Flags = KeyItem
+Description = A pair of special scissors that allows Furfrou to change its trim, altering its style without affecting its power.

@@ -3,9 +3,20 @@ Settings::DEXES_WITH_OFFSETS  = [4]
 #Formas en la Pokedex
 Settings::DEX_SHOWS_ALL_FORMS = false
 
-#Imagenes
 module GameData
     class Species
+        #Correccion Genero Pikachu Cosplay
+        Species.singleton_class.alias_method :walter_schema, :schema
+        def self.schema(compiling_forms = false)
+            ret = self.walter_schema(compiling_forms)
+            if compiling_forms
+                ret["GenderRatio"]    = [:gender_ratio,       "e", :GenderRatio]
+                ret["GrowthRate"]     = [:growth_rate,        "e", :GrowthRate]
+            end
+            return ret
+        end
+
+        #Imagenes
         def self.check_graphic_file(path, species, form = 0, gender = 0, shiny = false, shadow = false, subfolder = "")
             if species == :BASCULEGION
                 form = gender
@@ -41,6 +52,34 @@ module GameData
                 return ret if ret
             end
             return nil
+        end
+
+        #Tutores
+        def get_tutor_moves
+            case @id
+                when :PIKACHU     then moves = [:VOLTTACKLE]
+                when :PIKACHU_2   then moves = [:THUNDERSHOCK]
+                when :PIKACHU_3   then moves = [:ICICLECRASH]
+                when :PIKACHU_4   then moves = [:FLYINGPRESS]
+                when :PIKACHU_5   then moves = [:ELECTRICTERRAIN]
+                when :PIKACHU_6   then moves = [:DRAININGKISS]
+                when :PIKACHU_7   then moves = [:METEORMASH]
+                when :ROTOM_1     then moves = [:OVERHEAT]
+                when :ROTOM_2     then moves = [:HYDROPUMP]
+                when :ROTOM_3     then moves = [:BLIZZARD]
+                when :ROTOM_4     then moves = [:AIRSLASH]
+                when :ROTOM_5     then moves = [:LEAFSTORM]
+                when :KYUREM_1    then moves = [:ICEBURN, :FUSIONFLARE]
+                when :KYUREM_2    then moves = [:FREEZESHOCK, :FUSIONBOLT]
+                when :NECROZMA_1  then moves = [:SUNSTEELSTRIKE]
+                when :NECROZMA_2  then moves = [:MOONGEISTBEAM]
+                when :ZACIAN_1    then moves = [:BEHEMOTHBLADE]
+                when :ZAMAZENTA_1 then moves = [:BEHEMOTHBASH]
+                when :CALYREX_1   then moves = [:GLACIALLANCE]
+                when :CALYREX_2   then moves = [:ASTRALBARRAGE]
+            end
+            return @tutor_moves if !moves
+            return moves.concat(@tutor_moves.clone)
         end
     end
 end
@@ -151,7 +190,7 @@ class PokemonPokedexInfo_Scene
         return @index
     end
 
-    #Revisa si se ha visualizado la forma shiny
+    #Revisa si se ha visualizado la forma shiny  #Doble
     def pbGetAvailableForms(shiny = nil)
         ret = []
         multiple_forms = false
@@ -342,73 +381,6 @@ def pbChooseFromGameDataList(game_data, default = nil)
     num_sort = game_data == :Species ? -1 : 1
     return pbChooseList(commands, default, nil, num_sort)
 end
-
-#Orden en las Formas
-MenuHandlers.add(:pokemon_debug_menu, :species_and_form, {
-  "name"   => _INTL("Especie/forma..."),
-  "parent" => :main,
-  "effect" => proc { |pkmn, pkmnid, heldpoke, settingUpBattle, screen|
-    cmd = 0
-    loop do
-        msg = [_INTL("Especie {1}, forma {2}.", pkmn.speciesName, pkmn.form),
-                _INTL("Especie {1}, forma {2} (forzado).", pkmn.speciesName, pkmn.form)][(pkmn.forced_form.nil?) ? 0 : 1]
-        cmd = screen.pbShowCommands(msg,
-                                    [_INTL("Definir especie"),
-                                    _INTL("Definir forma"),
-                                    _INTL("Eliminar de anulados")], cmd)
-        break if cmd < 0
-        case cmd
-            when 0   # Set species
-                species = pbChooseSpeciesList(pkmn.species)
-                if species && species != pkmn.species
-                    pkmn.species = species
-                    pkmn.calc_stats
-                    $player.pokedex.register(pkmn) if !settingUpBattle && !pkmn.egg?
-                    screen.pbRefreshSingle(pkmnid)
-                end
-            when 1   # Set form
-                cmd2 = 0
-                formcmds = [[], []]
-                GameData::Species::DATA.values
-                .sort_by { |sp| [sp.species.to_s, sp.form] }
-                .each do |sp|
-                    next if sp.species != pkmn.species
-                    form_name = sp.form_name
-                    form_name = _INTL("Forma sin nombre") if !form_name || form_name.empty?
-                    form_name = sprintf("%d: %s", sp.form, form_name)
-                    formcmds[0].push(sp.form)
-                    formcmds[1].push(form_name)
-                    cmd2 = formcmds[0].length - 1 if pkmn.form == sp.form
-                end
-                if formcmds[0].length <= 1
-                    screen.pbDisplay(_INTL("La especie {1} solo tiene una forma.", pkmn.speciesName))
-                    if pkmn.form != 0 && screen.pbConfirm(_INTL("¿Quieres reiniciar la forma a la 0?"))
-                        pkmn.form = 0
-                        $player.pokedex.register(pkmn) if !settingUpBattle && !pkmn.egg?
-                        screen.pbRefreshSingle(pkmnid)
-                    end
-                else
-                    cmd2 = screen.pbShowCommands(_INTL("Define la forma del Pokémon."), formcmds[1], cmd2)
-                    next if cmd2 < 0
-                    f = formcmds[0][cmd2]
-                    if f != pkmn.form
-                        if MultipleForms.hasFunction?(pkmn, "getForm")
-                            next if !screen.pbConfirm(_INTL("Esta especie decide su propia forma. ¿Sobreescribir?"))
-                            pkmn.forced_form = f
-                        end
-                        pkmn.form = f
-                        $player.pokedex.register(pkmn) if !settingUpBattle && !pkmn.egg?
-                        screen.pbRefreshSingle(pkmnid)
-                    end
-                end
-            when 2   # Remove form override
-                pkmn.forced_form = nil
-                screen.pbRefreshSingle(pkmnid)
-        end
-    end
-    next false
-  }
-})
 
 #Pregunta si se añade el poke al equipo
 def pbAddPokemon(pkmn, level = 1, see_form = true)
@@ -688,6 +660,24 @@ if Settings::USE_NEW_EXP_SHARE
     end
 end
 
+class Pokemon
+    alias paldea_initialize initialize
+    def initialize(species, level, owner = $player, withMoves = true, recheck_form = true)
+        paldea_initialize(species, level, owner, withMoves, recheck_form)
+        @evo_move_count   = {}
+        @evo_crest_count  = {}
+        @evo_recoil_count = 0
+        @evo_step_count   = 0
+        if @species == :BASCULEGION && recheck_form
+            f = MultipleForms.call("getFormOnCreation", self)
+            if f
+                self.form = f
+                reset_moves if withMoves
+            end
+        end
+    end
+end
+
 #Movimiento Combate
 class Battle
     def pbRegisterMove(idxBattler, idxMove, showMessages = true)
@@ -711,7 +701,7 @@ class Battle
     end
 end
 
-#Adicion de la descripcion de habilidades
+#Adicion de la descripcion de habilidades #Doble
 class PokemonSummary_Scene
     def pbScene
         @pokemon.play_cry
@@ -824,112 +814,6 @@ class PokemonSummary_Scene
     end
 end
 
-#Copiar los atributos de Quilava a Cyndaquil
-MultipleForms.copy(:QUILAVA, :CYNDAQUIL, :DEWOTT, :DARTRIX, :PETILIL, :RUFFLET, :GOOMY, :BERGMITE)
-
-#Actualizacion de las formas de los pokes legendarios
-MultipleForms.register(:RESHIRAM, {
-  "getFormOnLeavingBattle" => proc { |pkmn, battle, usedInBattle, endBattle|
-    next 0 if pkmn.form >= 1
-  }
-})
-
-MultipleForms.register(:ZEKROM, {
-  "getFormOnLeavingBattle" => proc { |pkmn, battle, usedInBattle, endBattle|
-    next 0 if pkmn.form >= 1
-  }
-})
-
-MultipleForms.register(:KYUREM, {
-  "getFormOnLeavingBattle" => proc { |pkmn, battle, usedInBattle, endBattle|
-    next pkmn.form - 2 if pkmn.form >= 3   # Fused forms stop glowing
-  },
-  "onSetForm" => proc { |pkmn, form, oldForm|
-    case form
-    when 0   # Normal
-      pkmn.moves.each_with_index do |move, i|
-        case move.id
-        when :ICEBURN, :FREEZESHOCK
-          next if !GameData::Move.exists?(:GLACIATE)
-          if pkmn.hasMove?(:GLACIATE)
-            pkmn.moves[i] = nil
-          else
-            move.id = :GLACIATE
-          end
-        when :FUSIONFLARE, :FUSIONBOLT
-          next if !GameData::Move.exists?(:SCARYFACE)
-          if pkmn.hasMove?(:SCARYFACE)
-            pkmn.moves[i] = nil
-          else
-            move.id = :SCARYFACE
-          end
-        end
-        pkmn.moves.compact!
-      end
-    when 1   # White
-      pkmn.moves.each do |move|
-        case move.id
-        when :GLACIATE
-          next if !GameData::Move.exists?(:ICEBURN) || pkmn.hasMove?(:ICEBURN)
-          move.id = :ICEBURN
-        when :SCARYFACE
-          next if !GameData::Move.exists?(:FUSIONFLARE) || pkmn.hasMove?(:FUSIONFLARE)
-          move.id = :FUSIONFLARE
-        end
-      end
-    when 2   # Black
-      pkmn.moves.each do |move|
-        case move.id
-        when :GLACIATE
-          next if !GameData::Move.exists?(:FREEZESHOCK) || pkmn.hasMove?(:FREEZESHOCK)
-          move.id = :FREEZESHOCK
-        when :SCARYFACE
-          next if !GameData::Move.exists?(:FUSIONBOLT) || pkmn.hasMove?(:FUSIONBOLT)
-          move.id = :FUSIONBOLT
-        end
-      end
-    end
-  }
-})
-
-MultipleForms.register(:ZACIAN, {
-  "changePokemonOnStartingBattle" => proc { |pkmn, battle|
-    if GameData::Move.exists?(:BEHEMOTHBLADE) && pkmn.hasItem?(:RUSTEDSWORD)
-      pkmn.moves.each { |move| move.id = :BEHEMOTHBLADE if move.id == :IRONHEAD }
-    end
-  },
-  "getFormOnLeavingBattle" => proc { |pkmn, battle, usedInBattle, endBattle|
-    next 0 if endBattle
-  },
-  "changePokemonOnLeavingBattle" => proc { |pkmn, battle, usedInBattle, endBattle|
-    if endBattle
-      pkmn.moves.each { |move| move.id = :IRONHEAD if move.id == :BEHEMOTHBLADE }
-    end
-  }
-})
-
-MultipleForms.register(:ZAMAZENTA, {
-  "changePokemonOnStartingBattle" => proc { |pkmn, battle|
-    if GameData::Move.exists?(:BEHEMOTHBASH) && pkmn.hasItem?(:RUSTEDSHIELD)
-      pkmn.moves.each { |move| move.id = :BEHEMOTHBASH if move.id == :IRONHEAD }
-    end
-  },
-  "getFormOnLeavingBattle" => proc { |pkmn, battle, usedInBattle, endBattle|
-    next 0 if endBattle
-  },
-  "changePokemonOnLeavingBattle" => proc { |pkmn, battle, usedInBattle, endBattle|
-    if endBattle
-      pkmn.moves.each { |move| move.id = :IRONHEAD if move.id == :BEHEMOTHBASH }
-    end
-  }
-})
-
-MultipleForms.register(:XERNEAS, {
-  "getFormOnLeavingBattle" => proc { |pkmn, battle, usedInBattle, endBattle|
-    next 0 if endBattle
-  }
-})
-
 class Battle::Battler
     #Modificaciones para las formas de Reshiram, Zekrom y Kyurem
     alias new_forms_pbCheckForm pbCheckForm
@@ -1040,70 +924,182 @@ class Battle::Battler
     end
 end
 
-#Pikachu Cosplay
-MultipleForms.register(:PIKACHU, {
-  "onSetForm" => proc { |pkmn, form, oldForm|
-    form_moves = [
-      :ICICLECRASH,     # Pikachu Belle
-      :FLYINGPRESS,     # Pikachu Libre
-      :ELECTRICTERRAIN, # Pikachu, Ph.D.
-      :DRAININGKISS,    # Pikachu Pop Star
-      :METEORMASH       # Pikachu Rock Star
-    ]
-    # Find a known move that should be forgotten
-    old_move_index = -1
-    pkmn.moves.each_with_index do |move, i|
-      next if !form_moves.include?(move.id)
-      old_move_index = i
-      break
+class Pokemon
+    def gendernil
+        @gender = nil
     end
-    # Determine which new move to learn (if any)
-    new_move_id = (form > 2) && (form < 8) ? form_moves[form - 3] : nil
-    new_move_id = nil if !GameData::Move.exists?(new_move_id)
-    if new_move_id.nil? && old_move_index >= 0 && pkmn.numMoves == 1
-      new_move_id = :THUNDERSHOCK
-      new_move_id = nil if !GameData::Move.exists?(new_move_id)
-      raise _INTL("Pikachu está intentando olvidar su último movimiento, pero no tiene más movimientos con el que reemplazarlo.") if new_move_id.nil?
+
+    def species=(species_id)
+        new_species_data = GameData::Species.get(species_id)
+        return if @species == new_species_data.species
+        @species     = new_species_data.species
+        default_form = new_species_data.default_form
+        if default_form >= 0
+            @form      = default_form
+        elsif new_species_data.form > 0
+            @form      = new_species_data.form
+        end
+        @forced_form = nil
+        @gender      = nil if singleGendered? || @gender == 2
+        @level       = nil   # In case growth rate is different for the new species
+        @ability     = nil
+        calc_stats
     end
-    new_move_id = nil if pkmn.hasMove?(new_move_id)
-    # Forget a known move (if relevant) and learn a new move (if relevant)
-    if old_move_index >= 0
-      old_move_name = pkmn.moves[old_move_index].name
-      if new_move_id.nil?
-        # Just forget the old move
-        pkmn.forget_move_at_index(old_move_index)
-        pbMessage(_INTL("{1} olvidó {2}...", pkmn.name, old_move_name))
-      else
-        # Replace the old move with the new move (keeps the same index)
-        pkmn.moves[old_move_index].id = new_move_id
-        new_move_name = pkmn.moves[old_move_index].name
-        pbMessage(_INTL("{1} olvidó {2}...", pkmn.name, old_move_name) + "\1")
-        pbMessage("\\se[]" + _INTL("¡{1} aprendió {2}!", pkmn.name, new_move_name) + "\\se[Pkmn move learnt]")
-      end
-    elsif !new_move_id.nil?
-      # Just learn the new move
-      pbLearnMove(pkmn, new_move_id, true)
+end
+
+#Orden en las Formas
+MenuHandlers.add(:pokemon_debug_menu, :species_and_form, {
+  "name"   => _INTL("Especie/forma..."),
+  "parent" => :main,
+  "effect" => proc { |pkmn, pkmnid, heldpoke, settingUpBattle, screen|
+    cmd = 0
+    loop do
+        msg = [_INTL("Especie {1}, forma {2}.", pkmn.speciesName, pkmn.form),
+                _INTL("Especie {1}, forma {2} (forzado).", pkmn.speciesName, pkmn.form)][(pkmn.forced_form.nil?) ? 0 : 1]
+        cmd = screen.pbShowCommands(msg,
+                                    [_INTL("Definir especie"),
+                                    _INTL("Definir forma"),
+                                    _INTL("Eliminar de anulados")], cmd)
+        break if cmd < 0
+        case cmd
+            when 0   # Set species
+                species = pbChooseSpeciesList(pkmn.species)
+                if species && species != pkmn.species
+                    pkmn.species = species
+                    pkmn.calc_stats
+                    $player.pokedex.register(pkmn) if !settingUpBattle && !pkmn.egg?
+                    screen.pbRefreshSingle(pkmnid)
+                end
+            when 1   # Set form
+                cmd2 = 0
+                formcmds = [[], []]
+                GameData::Species::DATA.values
+                .sort_by { |sp| [sp.species.to_s, sp.form] }
+                .each do |sp|
+                    next if sp.species != pkmn.species
+                    form_name = sp.form_name
+                    form_name = _INTL("Forma sin nombre") if !form_name || form_name.empty?
+                    form_name = sprintf("%d: %s", sp.form, form_name)
+                    formcmds[0].push(sp.form)
+                    formcmds[1].push(form_name)
+                    cmd2 = formcmds[0].length - 1 if pkmn.form == sp.form
+                end
+                if formcmds[0].length <= 1
+                    screen.pbDisplay(_INTL("La especie {1} solo tiene una forma.", pkmn.speciesName))
+                    if pkmn.form != 0 && screen.pbConfirm(_INTL("¿Quieres reiniciar la forma a la 0?"))
+                        pkmn.gendernil if pkmn.species == :PIKACHU
+                        pkmn.form = 0
+                        $player.pokedex.register(pkmn) if !settingUpBattle && !pkmn.egg?
+                        screen.pbRefreshSingle(pkmnid)
+                    end
+                else
+                    cmd2 = screen.pbShowCommands(_INTL("Define la forma del Pokémon."), formcmds[1], cmd2)
+                    next if cmd2 < 0
+                    f = formcmds[0][cmd2]
+                    if f != pkmn.form
+                        if MultipleForms.hasFunction?(pkmn, "getForm")
+                            next if !screen.pbConfirm(_INTL("Esta especie decide su propia forma. ¿Sobreescribir?"))
+                            pkmn.forced_form = f
+                        end
+                        pkmn.gendernil if pkmn.species == :PIKACHU
+                        pkmn.form = f
+                        $player.pokedex.register(pkmn) if !settingUpBattle && !pkmn.egg?
+                        screen.pbRefreshSingle(pkmnid)
+                    end
+                end
+            when 2   # Remove form override
+                pkmn.forced_form = nil
+                screen.pbRefreshSingle(pkmnid)
+        end
     end
+    next false
   }
 })
 
 #Correccion Pokemon sin movimientos
 MenuHandlers.add(:pokemon_debug_menu, :forget_move, {
-  "name"   => _INTL("Olvidar movimiento"),
-  "parent" => :moves,
-  "effect" => proc { |pkmn, pkmnid, heldpoke, settingUpBattle, screen|
-    moveindex = screen.pbChooseMove(pkmn, _INTL("Elige un movimiento para olvidarlo."))
-    if pkmn.moves.length == 1
-        movename = pkmn.moves[moveindex].name
-        screen.pbDisplay(_INTL("{1} no puede olvidar {2}, por que es su último movimiento.", pkmn.name, movename))
+    "name"   => _INTL("Olvidar movimiento"),
+    "parent" => :moves,
+    "effect" => proc { |pkmn, pkmnid, heldpoke, settingUpBattle, screen|
+        moveindex = screen.pbChooseMove(pkmn, _INTL("Elige un movimiento para olvidarlo."))
+        if pkmn.moves.length == 1
+            movename = pkmn.moves[moveindex].name
+            screen.pbDisplay(_INTL("{1} no puede olvidar {2}, por que es su último movimiento.", pkmn.name, movename))
+            next false
+        end
+        if moveindex >= 0
+            movename = pkmn.moves[moveindex].name
+            pkmn.forget_move_at_index(moveindex)
+            screen.pbDisplay(_INTL("{1} olvidó {2}.", pkmn.name, movename))
+            screen.pbRefreshSingle(pkmnid)
+        end
+        next false
+    }
+})
+
+#Adicion de Objetos para cambiar Formas
+ItemHandlers::UseOnPokemon.add(:PIKACHUCATALOG, proc { |item, qty, pkmn, scene|
+    if !pkmn.isSpecies?(:PIKACHU) || pkmn.form < 2 || pkmn.form > 7
+        scene.pbDisplay(_INTL("No tendría efecto."))
+        next false
+    elsif pkmn.fainted?
+        scene.pbDisplay(_INTL("No se puede usar en Pokémon debilitados."))
         next false
     end
-    if moveindex >= 0
-      movename = pkmn.moves[moveindex].name
-      pkmn.forget_move_at_index(moveindex)
-      screen.pbDisplay(_INTL("{1} olvidó {2}.", pkmn.name, movename))
-      screen.pbRefreshSingle(pkmnid)
+    choices = [
+        _INTL("Cosplay Pikachu"),
+        _INTL("Pikachu Belle"),
+        _INTL("Pikachu Libre"),
+        _INTL("Pikachu, Ph.D."),
+        _INTL("Pikachu Pop Star"),
+        _INTL("Pikachu Rock Star"),
+        _INTL("Cancelar")
+    ]
+    new_form = scene.pbShowCommands(_INTL("¿Qué disfraz te gustaría ponerle?"), choices, pkmn.form-2)
+    if new_form == pkmn.form - 2
+        scene.pbDisplay(_INTL("No tendría ningún efecto."))
+        next false
+    elsif new_form >= 0 && new_form < choices.length - 1
+        pkmn.setForm(new_form + 2) do
+            scene.pbRefresh
+            scene.pbDisplay(_INTL("¡{1} se disfrazó!", pkmn.name))
+        end
+        next true
     end
     next false
-  }
+})
+
+ItemHandlers::UseOnPokemon.add(:SCISSORS, proc { |item, qty, pkmn, scene|
+    if !pkmn.isSpecies?(:FURFROU)
+        scene.pbDisplay(_INTL("No tendría efecto."))
+        next false
+    elsif pkmn.fainted?
+        scene.pbDisplay(_INTL("No se puede usar en Pokémon debilitados."))
+        next false
+    end
+    choices = [
+        _INTL("Natural Form"),
+        _INTL("Heart Trim"),
+        _INTL("Star Trim"),
+        _INTL("Diamond Trim"),
+        _INTL("Debutante Trim"),
+        _INTL("Matron Trim"),
+        _INTL("Dandy Trim"),
+        _INTL("La Reine Trim"),
+        _INTL("Kabuki Trim"),
+        _INTL("Pharaoh Trim"),
+        _INTL("Cancelar")
+    ]
+    new_form = scene.pbShowCommands(_INTL("¿Qué corte te gustaría hacerle?"), choices, pkmn.form)
+    if new_form == pkmn.form
+        scene.pbDisplay(_INTL("No tendría ningún efecto."))
+        next false
+    elsif new_form >= 0 && new_form < choices.length - 1
+        pkmn.setForm(new_form) do
+            scene.pbRefresh
+            scene.pbDisplay(_INTL("¡{1} cambio de corte!", pkmn.name))
+        end
+        next true
+    end
+    next false
 })
