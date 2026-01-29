@@ -1,4 +1,49 @@
 #-------------------------------
+[INFREPEL]
+Name = Repelente Infinito
+NamePlural = Repelente Infinito
+Pocket = 8
+Price = 0
+FieldUse = Direct
+Flags = KeyItem
+Description = Un repelente que nunca se gasta. Puedes activarlo y desactivarlo.
+#-------------------------------
+[RADAR]
+Name = Buscasalvajes
+NamePlural = Buscasalvajes
+Pocket = 8
+Price = 0
+FieldUse = Direct
+Flags = KeyItem
+Description = Dispositivo que ofrece información sobre los Pokémon salvajes del lugar en el que estés.
+#-------------------------------
+[VIAL]
+Name = Pokévial
+NamePlural = Pokévial
+Pocket = 8
+Price = 0
+FieldUse = Direct
+Flags = KeyItem
+Description = Aparato de usos limitados que permite curar a todo tu equipo. Se recarga en Centros Pokémon.
+#-------------------------------
+[EMPTYVIAL]
+Name = Pokévial
+NamePlural = Pokévial
+Pocket = 8
+Price = 0
+FieldUse = Direct
+Flags = KeyItem
+Description = Aparato de usos limitados que permite curar a todo tu equipo. Se recarga en Centros Pokémon. Vacío.
+#-------------------------------
+[EGGHATCHER]
+Name = Incubadora
+NamePlural = Incubadoras
+Pocket = 8
+Price = 0
+FieldUse = Direct
+Flags = KeyItem
+Description = Incubadora que permite mantener 6 huevos hasta que eclosionen.
+#-------------------------------
 [PIKACHUCATALOG]
 Name = Pikachu Catalog
 NamePlural = Pikachu Catalogs

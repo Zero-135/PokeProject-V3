@@ -819,32 +819,8 @@ class Battle::Battler
     alias new_forms_pbCheckForm pbCheckForm
     def pbCheckForm(endOfRound = false)
         new_forms_pbCheckForm(endOfRound)
-        if isSpecies?(:RESHIRAM) && self.ability == :TURBOBLAZE && @form == 0
-            pbChangeForm(1, _INTL(""))
-        end
-        if isSpecies?(:ZEKROM) && self.ability == :TERAVOLT && @form == 0
-            pbChangeForm(1, _INTL(""))
-        end
-        if isSpecies?(:KYUREM) && (@form == 1 || @form == 2)
-            pbChangeForm(@form + 2, _INTL(""))
-        end
-        if isSpecies?(:ZACIAN)
-            if hasActiveItem?(:RUSTEDSWORD)
-                pbChangeForm(1, _INTL(""))
-            else
-                pbChangeForm(0, _INTL(""))
-            end
-        end
-        if isSpecies?(:ZAMAZENTA)
-            if hasActiveItem?(:RUSTEDSHIELD)
-                pbChangeForm(1, _INTL(""))
-            else
-                pbChangeForm(0, _INTL(""))
-            end
-        end
-        if isSpecies?(:XERNEAS)
-            pbChangeForm(1, _INTL(""))
-        end
+        f = MultipleForms.call("getFormOnBattle", @pokemon)
+        pbChangeForm(f, _INTL("")) if f
     end
 
     #Cambia Formas en Ataques
@@ -887,36 +863,11 @@ class Battle::Battler
             return false
         end
         
-        last_form = @form
-        change = false
-        if isSpecies?(:SOLGALEO) && @form == 0 && (choice[2].id == :SUNSTEELSTRIKE || choice[2].id == :SEARINGSUNRAZESMASH)
-            change = true
-            last_form = @form
-            pbChangeForm(1, _INTL(""))
-        elsif isSpecies?(:LUNALA) && @form == 0 && (choice[2].id == :MOONGEISTBEAM || choice[2].id == :MENACINGMOONRAZEMAELSTROM)
-            change = true
-            last_form = @form
-            pbChangeForm(1, _INTL(""))
-        elsif isSpecies?(:MARSHADOW) && @form == 0 && choice[2].id == :SOULSTEALING7STARSTRIKE
-            change = true
-            last_form = @form
-            pbChangeForm(1, _INTL(""))
-        elsif isSpecies?(:ZACIAN) && @form == 1 && choice[2].id == :BEHEMOTHBLADE
-            change = true
-            last_form = @form
-            pbChangeForm(2, _INTL(""))
-        elsif isSpecies?(:ZAMAZENTA) && @form == 1 && choice[2].id == :BEHEMOTHBASH
-            change = true
-            last_form = @form
-            pbChangeForm(2, _INTL(""))
-        end
-        
+        f = MultipleForms.call("getFormOnAttack", @pokemon, choice[2].id)
+        pbChangeForm(f, _INTL("")) if f        
         PBDebug.log("[Use move] #{pbThis} (#{@index}) used #{choice[2].name}")
         PBDebug.logonerr { pbUseMove(choice, choice[2] == @battle.struggle) }
-
-        if change
-            pbChangeForm(last_form, _INTL(""))
-        end
+        pbChangeForm(f - 1, _INTL("")) if f
 
         @battle.pbJudge
         @battle.pbCalculatePriority if Settings::RECALCULATE_TURN_ORDER_AFTER_SPEED_CHANGES

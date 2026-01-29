@@ -3,18 +3,33 @@ MultipleForms.copy(:QUILAVA, :CYNDAQUIL)
 
 #Actualizacion de las formas de los pokes legendarios
 MultipleForms.register(:RESHIRAM, {
+    "getFormOnBattle" => proc { |pkmn|
+        if pkmn.ability == :TURBOBLAZE && pkmn.form == 0
+            next 1
+        end
+    },
     "getFormOnLeavingBattle" => proc { |pkmn, battle, usedInBattle, endBattle|
         next 0 if pkmn.form >= 1
     }
 })
 
 MultipleForms.register(:ZEKROM, {
+    "getFormOnBattle" => proc { |pkmn|
+        if pkmn.ability == :TERAVOLT && pkmn.form == 0
+            next 1
+        end
+    },
     "getFormOnLeavingBattle" => proc { |pkmn, battle, usedInBattle, endBattle|
         next 0 if pkmn.form >= 1
     }
 })
 
 MultipleForms.register(:KYUREM, {
+    "getFormOnBattle" => proc { |pkmn|
+        if pkmn.form == 1 || pkmn.form == 2
+            next pkmn.form + 2
+        end
+    },
     "getFormOnLeavingBattle" => proc { |pkmn, battle, usedInBattle, endBattle|
         next pkmn.form - 2 if pkmn.form >= 3   # Fused forms stop glowing
     },
@@ -67,6 +82,11 @@ MultipleForms.register(:KYUREM, {
 })
 
 MultipleForms.register(:ZACIAN, {
+    "getFormOnBattle" => proc { |pkmn|
+        if pkmn.form == 0 && pkmn.hasItem?(:RUSTEDSWORD)
+            next 1
+        end
+    },
     "changePokemonOnStartingBattle" => proc { |pkmn, battle|
         if GameData::Move.exists?(:BEHEMOTHBLADE) && pkmn.hasItem?(:RUSTEDSWORD)
             pkmn.moves.each { |move| move.id = :BEHEMOTHBLADE if move.id == :IRONHEAD }
@@ -79,10 +99,20 @@ MultipleForms.register(:ZACIAN, {
         if endBattle
             pkmn.moves.each { |move| move.id = :IRONHEAD if move.id == :BEHEMOTHBLADE }
         end
+    },
+    "getFormOnAttack" => proc { |pkmn, move|
+        if pkmn.form == 1 && move == :BEHEMOTHBLADE
+            next 2
+        end
     }
 })
 
 MultipleForms.register(:ZAMAZENTA, {
+    "getFormOnBattle" => proc { |pkmn|
+        if pkmn.form == 0 && pkmn.hasItem?(:RUSTEDSHIELD)
+            next 1
+        end
+    },
     "changePokemonOnStartingBattle" => proc { |pkmn, battle|
         if GameData::Move.exists?(:BEHEMOTHBASH) && pkmn.hasItem?(:RUSTEDSHIELD)
             pkmn.moves.each { |move| move.id = :BEHEMOTHBASH if move.id == :IRONHEAD }
@@ -95,10 +125,20 @@ MultipleForms.register(:ZAMAZENTA, {
         if endBattle
             pkmn.moves.each { |move| move.id = :IRONHEAD if move.id == :BEHEMOTHBASH }
         end
+    },
+    "getFormOnAttack" => proc { |pkmn, move|
+        if pkmn.form == 1 && move == :BEHEMOTHBASH
+            next 2
+        end
     }
 })
 
 MultipleForms.register(:XERNEAS, {
+    "getFormOnBattle" => proc { |pkmn|
+        if pkmn.ability == :FAIRYAURA && pkmn.form == 0
+            next 1
+        end
+    },
     "getFormOnLeavingBattle" => proc { |pkmn, battle, usedInBattle, endBattle|
         next 0 if endBattle
     }
@@ -294,6 +334,30 @@ MultipleForms.register(:HOOPA, {
                 new_move_name = pkmn.moves[old_move_index].name
                 pbMessage("\\se[]" + _INTL("{1} learned {2}!", pkmn.name, new_move_name) + "\\se[Pkmn move learnt]")
             end
+        end
+    }
+})
+
+MultipleForms.register(:SOLGALEO, {
+    "getFormOnAttack" => proc { |pkmn, move|
+        if pkmn.form == 0 && (move == :SUNSTEELSTRIKE || move == :SEARINGSUNRAZESMASH)
+            next 1
+        end
+    }
+})
+
+MultipleForms.register(:LUNALA, {
+    "getFormOnAttack" => proc { |pkmn, move|
+        if pkmn.form == 0 && (move == :MOONGEISTBEAM || move == :MENACINGMOONRAZEMAELSTROM)
+            next 1
+        end
+    }
+})
+
+MultipleForms.register(:MARSHADOW, {
+    "getFormOnAttack" => proc { |pkmn, move|
+        if pkmn.form == 0 && move == :SOULSTEALING7STARSTRIKE
+            next 1
         end
     }
 })
