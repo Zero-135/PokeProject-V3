@@ -1054,3 +1054,77 @@ ItemHandlers::UseOnPokemon.add(:SCISSORS, proc { |item, qty, pkmn, scene|
     end
     next false
 })
+
+module RotomFormChange
+  FORMS = {
+    :NORMAL => 0,
+    :HEAT   => 1,
+    :WASH   => 2,
+    :FROST  => 3,
+    :FAN    => 4,
+    :MOW    => 5
+  }
+
+  CHOICES = [
+    _INTL("Bombilla"),
+    _INTL("Microondas"),
+    _INTL("Lavadora"),
+    _INTL("Nevera"),
+    _INTL("Ventilador"),
+    _INTL("Corta césped"),
+    _INTL("Cancelar")
+  ]
+
+  # === MÉTODO BASE (el corazón de todo) ===
+  def self.apply_form(pkmn, new_form, scene = nil)
+    if pkmn.form == new_form
+      scene&.pbDisplay(_INTL("No tendría ningún efecto."))
+      return false
+    end
+
+    pkmn.setForm(new_form) do
+      scene&.pbRefresh
+      scene&.pbDisplay(_INTL("¡{1} se transformó!", pkmn.name))
+    end
+    return true
+  end
+
+  # === USO DESDE SCRIPT (lo que tú quieres) ===
+  def self.change_form(form_symbol, pkmn = nil)
+    new_form = FORMS[form_symbol]
+    return false if new_form.nil?
+
+    pkmn ||= $player.party.find { |p| p.isSpecies?(:ROTOM) && !p.fainted? }
+    return false if !pkmn
+
+    apply_form(pkmn, new_form)
+  end
+
+  # === USO CON MENÚ (ROTOM CATALOG) ===
+  def self.choose_form(pkmn, scene)
+    if !pkmn.isSpecies?(:ROTOM)
+      scene&.pbDisplay(_INTL("No se puede usar en este pokemon."))
+      return false
+    end
+    if pkmn.fainted?
+      scene&.pbDisplay(_INTL("Esto no puede ser usado en un Pokémon debilitado."))
+      return false
+    end
+
+    new_form = scene.pbShowCommands(
+      _INTL("¿Qué electrodoméstico quieres pedir?"),
+      CHOICES,
+      pkmn.form
+    )
+    return false if new_form < 0
+    return false if new_form >= CHOICES.length - 1
+
+    apply_form(pkmn, new_form, scene)
+  end
+end
+
+ItemHandlers::UseOnPokemon.add(:ROTOMCATALOG,
+  proc { |item, qty, pkmn, scene|
+    next RotomFormChange.choose_form(pkmn, scene)
+  }
+)
