@@ -120,6 +120,7 @@ Price = 3000
 SellPrice = 750
 BPPrice = 5
 FieldUse = OnPokemon
+BattleUse = OnPokemon
 Flags = EvolutionStone,Fling_30
 Description = A peculiar stone that makes certain species of Pokémon evolve. It is a clear, light blue.
 #-------------------------------
@@ -3914,6 +3915,7 @@ Pocket = 2
 Price = 5000
 BPPrice = 20
 FieldUse = OnPokemon
+BattleUse = OnPokemon
 Flags = Fling_30
 Description = A candy that is packed with energy. It raises the level of a single Pokémon by one.
 #-------------------------------

@@ -24,6 +24,7 @@ NamePlural = Linking Cords
 Pocket = 1
 Price = 2100
 FieldUse = OnPokemon
+BattleUse = OnPokemon
 Flags = Fling_30,EvolutionStone
 Description = A string exuding a mysterious energy of connection. It’s loved by certain Pokémon.
 #-------------------------------

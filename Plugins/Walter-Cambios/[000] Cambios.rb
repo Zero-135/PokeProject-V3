@@ -873,6 +873,205 @@ class Battle::Battler
         @battle.pbCalculatePriority if Settings::RECALCULATE_TURN_ORDER_AFTER_SPEED_CHANGES
         return true
     end
+
+    #Actualizacion Sprite Movimientos 2 Turnos
+    def pbRestoreBattlerSprite(user)
+        scene = @battle.scene
+        return if !scene
+
+        sprite = scene.sprites["pokemon_#{user.index}"]
+        return if !sprite
+
+        sprite.visible = true
+        sprite.opacity = 255
+        sprite.pbSetPosition
+    end
+
+    def pbProcessMoveHit(move, user, targets, hitNum, skipAccuracyCheck)
+        return false if user.fainted?
+        # For two-turn attacks being used in a single turn
+        move.pbInitialEffect(user, targets, hitNum)
+        numTargets = 0   # Number of targets that are affected by this hit
+        # Count a hit for Parental Bond (if it applies)
+        user.effects[PBEffects::ParentalBond] -= 1 if user.effects[PBEffects::ParentalBond] > 0
+        # Accuracy check (accuracy/evasion calc)
+        if hitNum == 0 || move.successCheckPerHit?
+            targets.each do |b|
+                b.damageState.missed = false
+                next if b.damageState.unaffected
+                if pbSuccessCheckPerHit(move, user, b, skipAccuracyCheck)
+                    numTargets += 1
+                else
+                    b.damageState.missed     = true
+                    b.damageState.unaffected = true
+                end
+            end
+            # If failed against all targets
+            if targets.length > 0 && numTargets == 0 && !move.worksWithNoTargets?
+                targets.each do |b|
+                    next if !b.damageState.missed || b.damageState.magicCoat
+                    pbMissMessage(move, user, b)
+                    if user.itemActive?
+                        Battle::ItemEffects.triggerOnMissingTarget(user.item, user, b, move, hitNum, @battle)
+                    end
+                    break if move.pbRepeatHit?   # Dragon Darts only shows one failure message
+                end
+                move.pbCrashDamage(user)
+                user.pbItemHPHealCheck
+                pbCancelMoves
+                
+                if move.pbIsChargingTurn?(user)
+                    pbRestoreBattlerSprite(user)
+                end
+                
+                return false
+            end
+        end
+        # If we get here, this hit will happen and do something
+        all_targets = targets
+        targets = move.pbDesignateTargetsForHit(targets, hitNum)   # For Dragon Darts
+        targets.each { |b| b.damageState.resetPerHit }
+        #---------------------------------------------------------------------------
+        # Calculate damage to deal
+        if move.pbDamagingMove?
+            targets.each do |b|
+                next if b.damageState.unaffected
+                # Check whether Substitute/Disguise will absorb the damage
+                move.pbCheckDamageAbsorption(user, b)
+                # Calculate the damage against b
+                # pbCalcDamage shows the "eat berry" animation for SE-weakening
+                # berries, although the message about it comes after the additional
+                # effect below
+                move.pbCalcDamage(user, b, targets.length)   # Stored in damageState.calcDamage
+                # Lessen damage dealt because of False Swipe/Endure/etc.
+                move.pbReduceDamage(user, b)   # Stored in damageState.hpLost
+            end
+        end
+        # Show move animation (for this hit)
+        move.pbShowAnimation(move.id, user, targets, hitNum)
+        # Type-boosting Gem consume animation/message
+        if user.effects[PBEffects::GemConsumed] && hitNum == 0
+            # NOTE: The consume animation and message for Gems are shown now, but the
+            #       actual removal of the item happens in def pbEffectsAfterMove.
+            @battle.pbCommonAnimation("UseItem", user)
+            @battle.pbDisplay(_INTL("¡{1} refuerza el poder de {2}!",
+                                    GameData::Item.get(user.effects[PBEffects::GemConsumed]).name, move.name))
+        end
+        # Messages about missed target(s) (relevant for multi-target moves only)
+        if !move.pbRepeatHit?
+            targets.each do |b|
+                next if !b.damageState.missed
+                pbMissMessage(move, user, b)
+                if user.itemActive?
+                    Battle::ItemEffects.triggerOnMissingTarget(user.item, user, b, move, hitNum, @battle)
+                end
+            end
+        end
+        # Deal the damage (to all allies first simultaneously, then all foes
+        # simultaneously)
+        if move.pbDamagingMove?
+            # This just changes the HP amounts and does nothing else
+            targets.each { |b| move.pbInflictHPDamage(b) if !b.damageState.unaffected }
+            # Animate the hit flashing and HP bar changes
+            move.pbAnimateHitAndHPLost(user, targets)
+        end
+        # Self-Destruct/Explosion's damaging and fainting of user
+        move.pbSelfKO(user) if hitNum == 0
+        user.pbFaint if user.fainted?
+        if move.pbDamagingMove?
+            targets.each do |b|
+                next if b.damageState.unaffected
+                # NOTE: This method is also used for the OHKO special message.
+                move.pbHitEffectivenessMessages(user, b, targets.length)
+                # Record data about the hit for various effects' purposes
+                move.pbRecordDamageLost(user, b)
+            end
+            # Close Combat/Superpower's stat-lowering, Flame Burst's splash damage,
+            # and Incinerate's berry destruction
+            targets.each do |b|
+                next if b.damageState.unaffected
+                move.pbEffectWhenDealingDamage(user, b)
+            end
+            # Ability/item effects such as Static/Rocky Helmet, and Grudge, etc.
+            targets.each do |b|
+                next if b.damageState.unaffected
+                pbEffectsOnMakingHit(move, user, b)
+            end
+            # Disguise/Endure/Sturdy/Focus Sash/Focus Band messages
+            targets.each do |b|
+                next if b.damageState.unaffected
+                move.pbEndureKOMessage(b)
+            end
+            # HP-healing held items (checks all battlers rather than just targets
+            # because Flame Burst's splash damage affects non-targets)
+            @battle.pbPriority(true).each do |b|
+                next if move.preventsBattlerConsumingHealingBerry?(b, targets)
+                b.pbItemHPHealCheck
+            end
+            # Animate battlers fainting (checks all battlers rather than just targets
+            # because Flame Burst's splash damage affects non-targets)
+            @battle.pbPriority(true).each { |b| b.pbFaint if b&.fainted? }
+        end
+        @battle.pbJudgeCheckpoint(user, move)
+        # Main effect (recoil/drain, etc.)
+        targets.each do |b|
+            next if b.damageState.unaffected
+            move.pbEffectAgainstTarget(user, b)
+        end
+        move.pbEffectGeneral(user)
+        targets.each { |b| b.pbFaint if b&.fainted? }
+        user.pbFaint if user.fainted?
+        # Additional effect
+        if !user.hasActiveAbility?(:SHEERFORCE)
+            targets.each do |b|
+                next if b.damageState.calcDamage == 0
+                chance = move.pbAdditionalEffectChance(user, b)
+                next if chance <= 0
+                move.pbAdditionalEffect(user, b) if @battle.pbRandom(100) < chance
+            end
+        end
+        # Make the target flinch (because of an item/ability)
+        targets.each do |b|
+            next if b.fainted?
+            next if b.damageState.calcDamage == 0 || b.damageState.substitute
+            chance = move.pbFlinchChance(user, b)
+            next if chance <= 0
+            if @battle.pbRandom(100) < chance
+                PBDebug.log("[Item/ability triggered] #{user.pbThis}'s King's Rock/Razor Fang or Stench")
+                b.pbFlinch(user)
+            end
+        end
+        # Message for and consuming of type-weakening berries
+        # NOTE: The "consume held item" animation for type-weakening berries occurs
+        #       during pbCalcDamage above (before the move's animation), but the
+        #       message about it only shows here.
+        targets.each do |b|
+            next if b.damageState.unaffected
+            next if !b.damageState.berryWeakened
+            @battle.pbDisplay(_INTL("¡{1} redujo el daño de {2}!", b.itemName, b.pbThis(true)))
+            b.pbConsumeItem
+        end
+        # Steam Engine (goes here because it should be after stat changes caused by
+        # the move)
+        if [:FIRE, :WATER].include?(move.calcType)
+            targets.each do |b|
+                next if b.damageState.unaffected
+                next if b.damageState.calcDamage == 0 || b.damageState.substitute
+                next if !b.hasActiveAbility?(:STEAMENGINE)
+                b.pbRaiseStatStageByAbility(:SPEED, 6, b) if b.pbCanRaiseStatStage?(:SPEED, b)
+            end
+        end
+        # Fainting
+        targets.each { |b| b.pbFaint if b&.fainted? }
+        user.pbFaint if user.fainted?
+        # Dragon Darts' second half of attack
+        if move.pbRepeatHit? && hitNum == 0 &&
+            targets.any? { |b| !b.fainted? && !b.damageState.unaffected }
+            pbProcessMoveHit(move, user, all_targets, 1, skipAccuracyCheck)
+        end
+        return true
+    end
+
 end
 
 class Pokemon
@@ -880,20 +1079,10 @@ class Pokemon
         @gender = nil
     end
 
+    alias __evo_species__= species=
     def species=(species_id)
-        new_species_data = GameData::Species.get(species_id)
-        return if @species == new_species_data.species
-        @species     = new_species_data.species
-        default_form = new_species_data.default_form
-        if default_form >= 0
-            @form      = default_form
-        elsif new_species_data.form > 0
-            @form      = new_species_data.form
-        end
-        @forced_form = nil
+        self.__evo_species__ = species_id
         @gender      = nil if singleGendered? || @gender == 2
-        @level       = nil   # In case growth rate is different for the new species
-        @ability     = nil
         calc_stats
     end
 end
@@ -967,27 +1156,6 @@ MenuHandlers.add(:pokemon_debug_menu, :species_and_form, {
   }
 })
 
-#Correccion Pokemon sin movimientos
-MenuHandlers.add(:pokemon_debug_menu, :forget_move, {
-    "name"   => _INTL("Olvidar movimiento"),
-    "parent" => :moves,
-    "effect" => proc { |pkmn, pkmnid, heldpoke, settingUpBattle, screen|
-        moveindex = screen.pbChooseMove(pkmn, _INTL("Elige un movimiento para olvidarlo."))
-        if pkmn.moves.length == 1
-            movename = pkmn.moves[moveindex].name
-            screen.pbDisplay(_INTL("{1} no puede olvidar {2}, por que es su último movimiento.", pkmn.name, movename))
-            next false
-        end
-        if moveindex >= 0
-            movename = pkmn.moves[moveindex].name
-            pkmn.forget_move_at_index(moveindex)
-            screen.pbDisplay(_INTL("{1} olvidó {2}.", pkmn.name, movename))
-            screen.pbRefreshSingle(pkmnid)
-        end
-        next false
-    }
-})
-
 #Adicion de Objetos para cambiar Formas
 ItemHandlers::UseOnPokemon.add(:PIKACHUCATALOG, proc { |item, qty, pkmn, scene|
     if !pkmn.isSpecies?(:PIKACHU) || pkmn.form < 2 || pkmn.form > 7
@@ -1055,76 +1223,276 @@ ItemHandlers::UseOnPokemon.add(:SCISSORS, proc { |item, qty, pkmn, scene|
     next false
 })
 
+#Formas de Rotom
+ItemHandlers::UseOnPokemon.add(:ROTOMCATALOG,
+    proc { |item, qty, pkmn, scene|
+        next RotomFormChange.choose_form(pkmn, scene)
+    }
+)
+
 module RotomFormChange
-  FORMS = {
-    :NORMAL => 0,
-    :HEAT   => 1,
-    :WASH   => 2,
-    :FROST  => 3,
-    :FAN    => 4,
-    :MOW    => 5
-  }
+    FORMS = {
+        :NORMAL => 0,
+        :HEAT   => 1,
+        :WASH   => 2,
+        :FROST  => 3,
+        :FAN    => 4,
+        :MOW    => 5
+    }
 
-  CHOICES = [
-    _INTL("Bombilla"),
-    _INTL("Microondas"),
-    _INTL("Lavadora"),
-    _INTL("Nevera"),
-    _INTL("Ventilador"),
-    _INTL("Corta césped"),
-    _INTL("Cancelar")
-  ]
+    CHOICES = [
+        _INTL("Bombilla"),
+        _INTL("Microondas"),
+        _INTL("Lavadora"),
+        _INTL("Nevera"),
+        _INTL("Ventilador"),
+        _INTL("Corta césped"),
+        _INTL("Cancelar")
+    ]
 
-  # === MÉTODO BASE (el corazón de todo) ===
-  def self.apply_form(pkmn, new_form, scene = nil)
-    if pkmn.form == new_form
-      scene&.pbDisplay(_INTL("No tendría ningún efecto."))
-      return false
+    # === MÉTODO BASE (el corazón de todo) ===
+    def self.apply_form(pkmn, new_form, scene = nil)
+        if pkmn.form == new_form
+            scene&.pbDisplay(_INTL("No tendría ningún efecto."))
+            return false
+        end
+
+        pkmn.setForm(new_form) do
+            scene&.pbRefresh
+            scene&.pbDisplay(_INTL("¡{1} se transformó!", pkmn.name))
+        end
+        return true
     end
 
-    pkmn.setForm(new_form) do
-      scene&.pbRefresh
-      scene&.pbDisplay(_INTL("¡{1} se transformó!", pkmn.name))
-    end
-    return true
-  end
+    # === USO DESDE SCRIPT (lo que tú quieres) ===
+    def self.change_form(form_symbol, pkmn = nil)
+        new_form = FORMS[form_symbol]
+        return false if new_form.nil?
 
-  # === USO DESDE SCRIPT (lo que tú quieres) ===
-  def self.change_form(form_symbol, pkmn = nil)
-    new_form = FORMS[form_symbol]
-    return false if new_form.nil?
+        pkmn ||= $player.party.find { |p| p.isSpecies?(:ROTOM) && !p.fainted? }
+        return false if !pkmn
 
-    pkmn ||= $player.party.find { |p| p.isSpecies?(:ROTOM) && !p.fainted? }
-    return false if !pkmn
-
-    apply_form(pkmn, new_form)
-  end
-
-  # === USO CON MENÚ (ROTOM CATALOG) ===
-  def self.choose_form(pkmn, scene)
-    if !pkmn.isSpecies?(:ROTOM)
-      scene&.pbDisplay(_INTL("No se puede usar en este pokemon."))
-      return false
-    end
-    if pkmn.fainted?
-      scene&.pbDisplay(_INTL("Esto no puede ser usado en un Pokémon debilitado."))
-      return false
+        apply_form(pkmn, new_form)
     end
 
-    new_form = scene.pbShowCommands(
-      _INTL("¿Qué electrodoméstico quieres pedir?"),
-      CHOICES,
-      pkmn.form
-    )
-    return false if new_form < 0
-    return false if new_form >= CHOICES.length - 1
+    # === USO CON MENÚ (ROTOM CATALOG) ===
+    def self.choose_form(pkmn, scene)
+        if !pkmn.isSpecies?(:ROTOM)
+            scene&.pbDisplay(_INTL("No se puede usar en este pokemon."))
+            return false
+        end
+        if pkmn.fainted?
+            scene&.pbDisplay(_INTL("Esto no puede ser usado en un Pokémon debilitado."))
+            return false
+        end
 
-    apply_form(pkmn, new_form, scene)
+        new_form = scene.pbShowCommands(
+        _INTL("¿Qué electrodoméstico quieres pedir?"),
+        CHOICES,
+        pkmn.form
+        )
+        return false if new_form < 0
+        return false if new_form >= CHOICES.length - 1
+
+        apply_form(pkmn, new_form, scene)
+    end
+end
+
+#Intercambios en Mapa
+def pbChoosePokemonForTradeAnyPokemon(variableNumber, nameVarNumber)
+    pbChooseTradablePokemon(variableNumber, nameVarNumber, proc { |pkmn|
+        next true
+    })
+end
+
+def pbStartTradeMySelf(pokemonIndex)
+    $stats.trade_count += 1
+    myPokemon = $player.party[pokemonIndex]
+    yourPokemon = myPokemon
+    resetmoves = false
+    pbFadeOutInWithMusic do
+        evo = PokemonTrade_Scene.new
+        evo.pbStartScreen(myPokemon, yourPokemon, $player.name, $player.name)
+        evo.pbTrade
+        evo.pbEndScreen
+    end
+    $player.party[pokemonIndex] = yourPokemon
+end
+
+#Correccion Evolucion Intercambio
+GameData::Evolution.register({
+    :id            => :TradeSpecies,
+    :parameter     => :Species,
+    :on_trade_proc => proc { |pkmn, parameter, other_pkmn|
+        next other_pkmn.species == parameter && !other_pkmn.hasItem?(:EVERSTONE)
+    }
+})
+
+GameData::Evolution.register({
+    :id            => :ITEMLINKING,
+    :parameter     => :Item,
+    :use_item_proc => proc { |pkmn, parameter, item|
+        next item == :LINKINGCORD && pkmn.item == parameter
+    },
+    :after_evolution_proc => proc { |pkmn, new_species, parameter, evo_species|
+        next false if evo_species != new_species || !pkmn.hasItem?(parameter)
+        pkmn.item = nil   # Item is now consumed
+        next true
+    }
+})
+
+GameData::Evolution.register({
+    :id            => :SPECIESLINKING,
+    :parameter     => :Species,
+    :use_item_proc => proc { |pkmn, parameter, item|
+        next item == :LINKINGCORD && $player.has_species?(parameter)
+    }
+})
+
+
+#Evoluciones en Batalla
+class Battle
+    alias battle_pbGainExpOne pbGainExpOne
+    def pbGainExpOne(idxParty, defeatedBattler, numPartic, expShare, expAll, showMessages = true)
+        battle_pbGainExpOne(idxParty, defeatedBattler, numPartic, expShare, expAll, showMessages)
+
+        pkmn = pbParty(0)[idxParty]
+        new_species = pkmn.check_evolution_on_level_up
+        return if !new_species
+
+        pbFadeOutInWithMusic do
+            evo = PokemonEvolutionScene.new
+            evo.pbStartScreen(pkmn, new_species)
+            evo.pbEvolution
+            evo.pbEndScreen
+        end
+
+        battler = @battlers.find { |b| b && b.pokemon.equal?(pkmn) }
+        updateBattler(battler, @scene)
+    end
+end
+
+#Metodo para actualizar el sprite luego de evolucionar
+def updateBattler(battler, scene)
+    if battler
+        idxBattler = battler.index
+        battler.pbUpdate(true)
+        scene.pbChangePokemon(battler, battler.pokemon)
+        scene.pbRefreshOne(idxBattler)
+    end
+end
+
+#Evoluciones por Piedra
+ItemHandlers::BattleUseOnPokemon.addIf(:evolution_stones,
+    proc { |item| GameData::Item.get(item).is_evolution_stone? },
+    proc { |item, pokemon, battler, choices, scene|
+    if pokemon.shadowPokemon?
+        scene.pbDisplay(_INTL("No tendría ningún efecto."))
+        next false
+    end
+    newspecies = pokemon.check_evolution_on_use_item(item)
+    if newspecies
+        pbFadeOutInWithMusic do
+            evo = PokemonEvolutionScene.new
+            evo.pbStartScreen(pokemon, newspecies)
+            evo.pbEvolution(false)
+            evo.pbEndScreen
+            if scene.is_a?(PokemonPartyScreen)
+                scene.pbRefreshAnnotations(proc { |p| !p.check_evolution_on_use_item(item).nil? })
+                scene.pbRefresh
+            end
+        end
+        updateBattler(battler, scene)
+        next true
+    end
+    scene.pbDisplay(_INTL("No tendría ningún efecto."))
+    next false
+})
+
+alias _oldpbBattleAnimation pbBattleAnimation
+def pbBattleAnimation(*args, &block)
+    _oldpbBattleAnimation(*args, &block)
+    $PokemonBattle = nil
+end
+
+class Battle
+  alias _store_battle initialize
+  def initialize(*args)
+    _store_battle(*args)
+    $PokemonBattle = self
   end
 end
 
-ItemHandlers::UseOnPokemon.add(:ROTOMCATALOG,
-  proc { |item, qty, pkmn, scene|
-    next RotomFormChange.choose_form(pkmn, scene)
-  }
-)
+class PokemonBag_Scene
+    alias old_pbUpdateAnnotation pbUpdateAnnotation
+    def pbUpdateAnnotation
+        if $game_temp.in_battle
+            itemwindow = @sprites["itemlist"]
+            item       = itemwindow.item
+            itm        = GameData::Item.get(item) if item
+
+            orderBattle = $PokemonBattle.pbPartyOrder(0)
+            new_party = []
+            orderBattle.each do |i|
+                pkmn = $player.party[i]
+                new_party << pkmn if pkmn
+            end
+            
+            if @bag.last_viewed_pocket == 1 && item #Items Pocket
+                annotations = nil
+                annotations = []
+                color_annotations=[]
+                if itm.is_evolution_stone?
+                    for i in new_party
+                        elig = i.check_evolution_on_use_item(itm)
+                        annotations.push((elig) ? _INTL("APTO") : _INTL("NO APTO"))
+                        color_annotations.push((elig) ? nil : true)
+                    end
+                else
+                    for i in 0...Settings::MAX_PARTY_SIZE
+                        @sprites["pokemon#{i}"].text = annotations[i] if  annotations
+                        @sprites["pokemon#{i}"].text_color = color_annotations[i] if annotations
+                    end
+                end
+                for i in 0...Settings::MAX_PARTY_SIZE
+                    @sprites["pokemon#{i}"].text = annotations[i] if  annotations
+                    @sprites["pokemon#{i}"].text_color = color_annotations[i] if annotations
+                end
+            else
+                old_pbUpdateAnnotation
+            end
+        else
+            old_pbUpdateAnnotation
+        end
+    end
+end
+
+#Evolucion por RareCandy
+ItemHandlers::BattleUseOnPokemon.add(:RARECANDY, proc { |item, pokemon, battler, choices, scene|
+    if pokemon.shadowPokemon?
+        scene.pbDisplay(_INTL("No tendría ningún efecto."))
+        next false
+    end
+    if pokemon.level >= GameData::GrowthRate.max_level
+        new_species = pokemon.check_evolution_on_level_up
+        if !Settings::RARE_CANDY_USABLE_AT_MAX_LEVEL || !new_species
+            scene.pbDisplay(_INTL("No tendría ningún efecto."))
+            next false
+        end
+        # Check for evolution
+        pbFadeOutInWithMusic do
+            evo = PokemonEvolutionScene.new
+            evo.pbStartScreen(pokemon, new_species)
+            evo.pbEvolution
+            evo.pbEndScreen
+            scene.pbRefresh if scene.is_a?(PokemonPartyScreen)
+        end
+        updateBattler(battler, scene)
+        next true
+    end
+    # Level up
+    pbSEPlay("Pokemon level up")
+    pbChangeLevel(pokemon, pokemon.level + 1, scene)
+    updateBattler(battler, scene)
+    next true
+})

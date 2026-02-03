@@ -1,4 +1,4 @@
-Name         = ZZZ_[Walter]
+Name         = Walter-Cambios
 Version      = 1.0.0
 Essentials   = 21.1
 Website      = -----
