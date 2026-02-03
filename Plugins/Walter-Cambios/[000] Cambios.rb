@@ -1354,9 +1354,13 @@ GameData::Evolution.register({
 class Battle
     alias battle_pbGainExpOne pbGainExpOne
     def pbGainExpOne(idxParty, defeatedBattler, numPartic, expShare, expAll, showMessages = true)
-        battle_pbGainExpOne(idxParty, defeatedBattler, numPartic, expShare, expAll, showMessages)
-
         pkmn = pbParty(0)[idxParty]
+        old_level = pkmn.level
+        battle_pbGainExpOne(idxParty, defeatedBattler, numPartic, expShare, expAll, showMessages)
+        new_level = pkmn.level
+
+        return if new_level <= old_level
+
         new_species = pkmn.check_evolution_on_level_up
         return if !new_species
 
