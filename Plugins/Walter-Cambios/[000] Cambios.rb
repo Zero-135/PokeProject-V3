@@ -1374,6 +1374,17 @@ class Battle
         battler = @battlers.find { |b| b && b.pokemon.equal?(pkmn) }
         updateBattler(battler, @scene)
     end
+    
+    def pbPlayerDisplayParty(idxBattler = 0)
+        partyOrders = pbPartyOrder(idxBattler)
+        idxStart, _idxEnd = pbTeamIndexRangeFromBattlerIndex(idxBattler)
+        ret = []
+        (partyOrders.length...pbParty(idxBattler).length).each do |i|
+            partyOrders << i
+        end
+        eachInTeamFromBattlerIndex(idxBattler) { |pkmn, i| ret[partyOrders[i] - idxStart] = pkmn }
+        return ret
+    end
 end
 
 #Metodo para actualizar el sprite luego de evolucionar
