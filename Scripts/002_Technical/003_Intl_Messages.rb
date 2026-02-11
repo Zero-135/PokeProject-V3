@@ -21,7 +21,7 @@ module Translator
       # Si Scripts.rxdata solo tiene 1 sección, los scripts han sido extraídos. Obtén
       # textos de los archivos .rb en Data/Scripts
       if $RGSS_SCRIPTS.length == 1
-        Dir.all("Data/Scripts").each do |script_file|
+        Dir.all("Scripts").each do |script_file|
           if System.uptime - t >= 5
             t += 5
             Graphics.update
